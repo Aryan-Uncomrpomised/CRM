@@ -1537,6 +1537,8 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
             )
             # 2. Fetch sales line entries for Account 200110 (Revenue From Operations - Sale of Goods - Produce)
             sales_by_partner = {}
+            orders_by_partner = {}
+            moves_by_partner = {}
             try:
                 move_lines = models.execute_kw(
                     odoo_db, uid, odoo_key,
@@ -1550,19 +1552,30 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
                         p_id = pid[0]
                         amt = (line.get('credit') or 0.0) - (line.get('debit') or 0.0)
                         sales_by_partner[p_id] = sales_by_partner.get(p_id, 0.0) + amt
+                        
+                        m_id = line.get('move_id')
+                        m_val = m_id[0] if isinstance(m_id, (list, tuple)) else m_id
+                        if p_id not in moves_by_partner:
+                            moves_by_partner[p_id] = set()
+                        if m_val:
+                            moves_by_partner[p_id].add(m_val)
+                
+                for p_id, m_set in moves_by_partner.items():
+                    orders_by_partner[p_id] = len(m_set)
             except Exception as e_account:
                 logger.info(f"Odoo account.move.line query notice: {e_account}")
 
-            return partners, sales_by_partner
+            return partners, sales_by_partner, orders_by_partner
 
-        partners, sales_by_partner = await asyncio.to_thread(_fetch_odoo_data)
+        partners, sales_by_partner, orders_by_partner = await asyncio.to_thread(_fetch_odoo_data)
         synced_count = 0
         now = datetime.now(timezone.utc).isoformat()
         for p in partners:
             if not p.get("name"):
                 continue
             cid = f"odoo_{p['id']}"
-            calc_spent = round(sales_by_partner.get(p['id'], p.get('total_invoiced') or 0.0), 2)
+            calc_spent = round(max(0.0, sales_by_partner.get(p['id'], p.get('total_invoiced') or 0.0)), 2)
+            calc_orders = orders_by_partner.get(p['id'], 1 if calc_spent > 0 else 0)
             doc = {
                 "id": cid,
                 "name": p["name"],
@@ -1571,6 +1584,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
                 "category": "b2b" if p.get("is_company") else "consumer",
                 "classification": "customer" if calc_spent > 0 else "prospect",
                 "total_spent": calc_spent,
+                "total_orders": calc_orders,
                 "notes": p.get("comment") or "Account 200110 - Revenue From Operations (Odoo)",
                 "source": "odoo_live",
                 "updated_at": now,
@@ -1632,6 +1646,71 @@ async def stats_overview(_: dict = Depends(get_current_user)):
         "active_automations": active_autos,
         "total_revenue": round(total_revenue, 2),
         "revenue_trend": weeks,
+    }
+
+@api.get("/stats/sales")
+async def stats_sales(_: dict = Depends(get_current_user)):
+    """Sales Analytics & Revenue Dashboard Endpoint."""
+    # 1. Total revenue & count from Account 200110 move_lines
+    pipeline_tot = [
+        {"$match": {"account_id_code": "200110"}},
+        {"$group": {"_id": None, "total": {"$sum": {"$subtract": ["$credit", "$debit"]}}, "count": {"$sum": 1}}}
+    ]
+    tot_res = await db.move_lines.aggregate(pipeline_tot).to_list(1)
+    tot_rev = round(float(tot_res[0]["total"]), 2) if tot_res else 0.0
+    
+    # 2. Unique sales orders count
+    distinct_moves = await db.move_lines.distinct("move_id_id", {"account_id_code": "200110"})
+    orders_count = len([m for m in distinct_moves if m])
+    aov = round(tot_rev / orders_count, 2) if orders_count else 0.0
+    
+    # 3. Top selling products
+    pipeline_prod = [
+        {"$match": {"account_id_code": "200110", "product_id_name": {"$ne": None}}},
+        {"$group": {
+            "_id": "$product_id_name",
+            "quantity": {"$sum": "$quantity"},
+            "revenue": {"$sum": {"$subtract": ["$credit", "$debit"]}}
+        }},
+        {"$sort": {"revenue": -1}},
+        {"$limit": 10}
+    ]
+    raw_prods = await db.move_lines.aggregate(pipeline_prod).to_list(10)
+    top_products = [{"name": p["_id"] or "General Sales", "quantity": round(p["quantity"], 2), "revenue": round(p["revenue"], 2)} for p in raw_prods]
+    
+    # 4. Monthly sales trend
+    pipeline_month = [
+        {"$match": {"account_id_code": "200110", "date": {"$ne": ""}}},
+        {"$project": {
+            "month": {"$substr": ["$date", 0, 7]},
+            "amt": {"$subtract": ["$credit", "$debit"]}
+        }},
+        {"$group": {
+            "_id": "$month",
+            "revenue": {"$sum": "$amt"},
+            "orders": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    raw_months = await db.move_lines.aggregate(pipeline_month).to_list(24)
+    monthly_trend = [{"month": m["_id"], "revenue": round(m["revenue"], 2), "orders": m["orders"]} for m in raw_months[-12:]]
+    
+    # 5. Top spending customers
+    top_cust_docs = await db.customers.find({"total_spent": {"$gt": 0}}, {"_id": 0}).sort("total_spent", -1).limit(10).to_list(10)
+    
+    # 6. Vendor purchases summary
+    vendor_bills_count = await db.vendor_bills.count_documents({})
+    stock_quants_count = await db.stock_quants.count_documents({})
+
+    return {
+        "total_sales_revenue": tot_rev,
+        "total_orders_count": orders_count,
+        "avg_order_value": aov,
+        "top_products": top_products,
+        "monthly_trend": monthly_trend,
+        "top_customers": top_cust_docs,
+        "vendor_bills_count": vendor_bills_count,
+        "stock_quants_count": stock_quants_count,
     }
 
 # -----------------------------------------------------------------------------

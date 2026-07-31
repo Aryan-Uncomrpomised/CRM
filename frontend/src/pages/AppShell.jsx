@@ -18,6 +18,7 @@ import {
   FolderOpen,
   Sparkles,
   Kanban,
+  TrendingUp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +34,7 @@ import { toast } from "sonner";
 const NAV = [
   { to: "/", label: "Home", icon: Sparkles, end: true, testid: "nav-home" },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, testid: "nav-dashboard" },
+  { to: "/sales", label: "Sales Analytics", icon: TrendingUp, testid: "nav-sales" },
   { to: "/customers", label: "Contacts", icon: Users, testid: "nav-customers" },
   { to: "/pipeline", label: "Pipeline", icon: Kanban, testid: "nav-pipeline" },
   { to: "/segments", label: "Segments", icon: Filter, testid: "nav-segments" },

@@ -6,6 +6,7 @@ import Login from "@/pages/Login";
 import AppShell from "@/pages/AppShell";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
+import SalesDashboard from "@/pages/SalesDashboard";
 import Customers from "@/pages/Customers";
 import Pipeline from "@/pages/Pipeline";
 import Segments from "@/pages/Segments";
@@ -52,6 +53,7 @@ function App() {
             >
               <Route index element={<Home />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="sales" element={<SalesDashboard />} />
               <Route path="customers" element={<Customers />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="segments" element={<Segments />} />
