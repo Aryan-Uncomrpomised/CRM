@@ -1487,60 +1487,91 @@ async def list_connectors(_: dict = Depends(get_current_user)):
     docs.sort(key=lambda d: default_ids.index(d["id"]) if d["id"] in default_ids else 999)
     return docs
 
-async def _sync_odoo_live() -> int:
+async def _sync_odoo_live(clear_dummy: bool = True) -> int:
     odoo_url = os.environ.get("ODOO_URL", "https://simplability.odoo.com")
     odoo_db = os.environ.get("ODOO_DB", "simplability")
     odoo_key = os.environ.get("ODOO_API_KEY", "")
     odoo_user = os.environ.get("ODOO_USERNAME", "admin")
 
+    if clear_dummy:
+        # Purge dummy synthetic customers on real sync
+        await db.customers.delete_many({"source": {"$ne": "odoo"}})
+
     if not odoo_key:
         return 0
 
-    # Attempt XML-RPC connection to Odoo
+    # Attempt XML-RPC connection to Odoo for partners & Account 200110 sales
     try:
         import xmlrpc.client
         import asyncio
         
-        def _fetch_odoo_partners():
+        def _fetch_odoo_data():
             clean_url = odoo_url.rstrip("/").removesuffix("/odoo")
             common = xmlrpc.client.ServerProxy(f"{clean_url}/xmlrpc/2/common")
             uid = common.authenticate(odoo_db, odoo_user, odoo_key, {})
             if not uid:
-                # Try authenticating directly or return mock
-                return []
+                return [], {}
             models = xmlrpc.client.ServerProxy(f"{clean_url}/xmlrpc/2/object")
+            # 1. Fetch active partners (customers)
             partners = models.execute_kw(
                 odoo_db, uid, odoo_key,
                 'res.partner', 'search_read',
                 [[['active', '=', True]]],
-                {'fields': ['id', 'name', 'email', 'phone', 'comment', 'is_company'], 'limit': 100}
+                {'fields': ['id', 'name', 'email', 'phone', 'comment', 'is_company', 'total_invoiced'], 'limit': 200}
             )
-            return partners
+            # 2. Fetch sales line entries for Account 200110 (Revenue From Operations - Sale of Goods - Produce)
+            sales_by_partner = {}
+            try:
+                move_lines = models.execute_kw(
+                    odoo_db, uid, odoo_key,
+                    'account.move.line', 'search_read',
+                    [[['account_id.code', '=', '200110']]],
+                    {'fields': ['partner_id', 'credit', 'debit', 'balance', 'move_id']}
+                )
+                for line in move_lines:
+                    pid = line.get('partner_id')
+                    if pid and isinstance(pid, (list, tuple)):
+                        p_id = pid[0]
+                        amt = (line.get('credit') or 0.0) - (line.get('debit') or 0.0)
+                        sales_by_partner[p_id] = sales_by_partner.get(p_id, 0.0) + amt
+            except Exception as e_account:
+                logger.info(f"Odoo account.move.line query notice: {e_account}")
 
-        partners = await asyncio.to_thread(_fetch_odoo_partners)
+            return partners, sales_by_partner
+
+        partners, sales_by_partner = await asyncio.to_thread(_fetch_odoo_data)
         synced_count = 0
         now = datetime.now(timezone.utc).isoformat()
         for p in partners:
             if not p.get("name"):
                 continue
             cid = f"odoo_{p['id']}"
+            calc_spent = round(sales_by_partner.get(p['id'], p.get('total_invoiced') or 0.0), 2)
             doc = {
                 "id": cid,
                 "name": p["name"],
-                "email": p.get("email") or f"odoo.{p['id']}@simplability.com",
+                "email": p.get("email") or f"{p['name'].lower().replace(' ', '.')}@simplability.com",
                 "phone": p.get("phone") or "",
                 "category": "b2b" if p.get("is_company") else "consumer",
-                "classification": "customer",
-                "notes": p.get("comment") or "Synced from Odoo POS / ERP",
+                "classification": "customer" if calc_spent > 0 else "prospect",
+                "total_spent": calc_spent,
+                "notes": p.get("comment") or "Account 200110 - Revenue From Operations (Odoo)",
                 "source": "odoo",
                 "updated_at": now,
             }
-            await db.customers.update_one({"id": cid}, {"$set": doc, "$setOnInsert": {"created_at": now, "total_spent": random.randint(50, 500)}}, upsert=True)
+            await db.customers.update_one({"id": cid}, {"$set": doc, "$setOnInsert": {"created_at": now, "total_orders": 1 if calc_spent > 0 else 0}}, upsert=True)
             synced_count += 1
         return synced_count
     except Exception as e:
-        logger.warning(f"Odoo sync fallback: {e}")
+        logger.warning(f"Odoo sync exception: {e}")
         return 0
+
+@api.post("/connectors/clear-dummy")
+async def clear_dummy_data(_: dict = Depends(get_current_user)):
+    """Removes synthetic dummy seed data to keep only clean real data."""
+    deleted_c = await db.customers.delete_many({"source": {"$ne": "odoo"}})
+    deleted_r = await db.reminders.delete_many({})
+    return {"deleted_customers": deleted_c.deleted_count, "deleted_reminders": deleted_r.deleted_count}
 
 @api.post("/connectors/{cid}/sync")
 async def sync_connector(cid: str, _: dict = Depends(get_current_user)):
