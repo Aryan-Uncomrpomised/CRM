@@ -1501,7 +1501,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
     odoo_url = os.environ.get("ODOO_URL", "https://simplability.odoo.com")
     odoo_db = os.environ.get("ODOO_DB", "simplability")
     odoo_key = os.environ.get("ODOO_API_KEY", "")
-    odoo_user = os.environ.get("ODOO_USERNAME", "admin")
+    odoo_user = os.environ.get("ODOO_USERNAME", "finance@uncompromised.in")
 
     if clear_dummy:
         # Purge dummy synthetic customers on real sync
