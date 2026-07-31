@@ -141,15 +141,13 @@ export default function AppShell() {
             />
           </div>
           <div className="text-[11px] font-mono text-white/40 hidden md:flex items-center gap-3">
-            <button
+            <div
               data-testid="currency-toggle"
-              onClick={toggle}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-white/[0.08] rounded hover:bg-white/[0.05] transition-colors text-white/70 hover:text-white"
-              title="Toggle currency"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-white/[0.08] rounded bg-white/[0.03] text-emerald-400 font-bold"
             >
-              <span className="font-display font-bold">{currency === "USD" ? "$" : "₹"}</span>
-              <span className="text-[10px] uppercase tracking-widest">{currency}</span>
-            </button>
+              <span className="font-display">₹</span>
+              <span className="text-[10px] uppercase tracking-widest">INR</span>
+            </div>
             <NotificationBell />
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shopify · syncing
