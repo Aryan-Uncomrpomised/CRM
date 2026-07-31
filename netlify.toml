@@ -1,7 +1,15 @@
 [build]
-  base = "frontend"
-  publish = "build"
-  command = "yarn build"
+  command = "cd frontend && npm install && npm run build"
+  publish = "frontend/build"
+
+[functions]
+  directory = "netlify/functions"
+  included_files = ["backend/**"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
 
 [[redirects]]
   from = "/*"
