@@ -1584,7 +1584,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
             doc = {
                 "id": cid,
                 "name": p["name"],
-                "email": p.get("email") or f"{p['name'].lower().replace(' ', '.')}@simplability.com",
+                "email": p.get("email") or (f"{p.get('phone')}@simplability.com" if p.get("phone") else f"{p['name'].lower().replace(' ', '.')}@simplability.com"),
                 "phone": p.get("phone") or "",
                 "category": "b2b" if p.get("is_company") else "consumer",
                 "classification": "customer" if calc_spent > 0 else "prospect",
