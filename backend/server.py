@@ -145,7 +145,7 @@ class LoginIn(BaseModel):
 class Customer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    email: EmailStr
+    email: Optional[str] = ""
     phone: Optional[str] = None
     country: Optional[str] = None
     category: Category = "consumer"
@@ -154,14 +154,14 @@ class Customer(BaseModel):
     linkedin_url: Optional[str] = None
     notes: Optional[str] = None
     owner: Optional[str] = None  # user name who owns this record
-    classification: Classification = "visitor"
+    classification: str = "prospect"
     total_orders: int = 0
     total_spent: float = 0.0
     last_order_at: Optional[str] = None
     subscription_active: bool = False
     subscription_renewal_at: Optional[str] = None
     tags: List[str] = []
-    source: Literal["shopify", "odoo", "manual"] = "shopify"
+    source: str = "odoo"
     avatar_url: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
