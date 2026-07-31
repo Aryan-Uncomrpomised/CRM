@@ -22,9 +22,9 @@ from pydantic import BaseModel, Field, EmailStr
 # -----------------------------------------------------------------------------
 # Config
 # -----------------------------------------------------------------------------
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb+srv://aryansaxena941_db_user:TVrTbBPkNPUW83z2@cluster0.h8sdvpb.mongodb.net/voyage_crm?retryWrites=true&w=majority&appName=Cluster0')
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ.get('DB_NAME', 'voyage_crm')]
 
 JWT_ALGORITHM = "HS256"
 JWT_SECRET = os.environ["JWT_SECRET"]
@@ -437,7 +437,7 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
             {"email": {"$regex": q, "$options": "i"}},
             {"company": {"$regex": q, "$options": "i"}},
         ]
-    docs = await db.customers.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    docs = await db.customers.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
     for d in docs:
         d.setdefault("category", "consumer")
     return docs
@@ -1500,12 +1500,12 @@ async def list_connectors(_: dict = Depends(get_current_user)):
 async def _sync_odoo_live(clear_dummy: bool = True) -> int:
     odoo_url = os.environ.get("ODOO_URL", "https://simplability.odoo.com")
     odoo_db = os.environ.get("ODOO_DB", "simplability")
-    odoo_key = os.environ.get("ODOO_API_KEY", "")
+    odoo_key = os.environ.get("ODOO_API_KEY", "47d7e9974ad4ca3d766fbbb47d77cae4a8fc4c88")
     odoo_user = os.environ.get("ODOO_USERNAME", "finance@uncompromised.in")
 
     if clear_dummy:
         # Purge dummy synthetic customers on real sync
-        await db.customers.delete_many({"source": {"$ne": "odoo"}})
+        await db.customers.delete_many({"source": {"$nin": ["odoo", "odoo_live"]}})
 
     if not odoo_key:
         return 0
@@ -1522,12 +1522,12 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
             if not uid:
                 return [], {}
             models = xmlrpc.client.ServerProxy(f"{clean_url}/xmlrpc/2/object")
-            # 1. Fetch active partners (customers)
+            # 1. Fetch active partners (customers) — no limit to get all partners
             partners = models.execute_kw(
                 odoo_db, uid, odoo_key,
                 'res.partner', 'search_read',
                 [[['active', '=', True]]],
-                {'fields': ['id', 'name', 'email', 'phone', 'comment', 'is_company', 'total_invoiced'], 'limit': 200}
+                {'fields': ['id', 'name', 'email', 'phone', 'comment', 'is_company', 'total_invoiced']}
             )
             # 2. Fetch sales line entries for Account 200110 (Revenue From Operations - Sale of Goods - Produce)
             sales_by_partner = {}
@@ -1566,7 +1566,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
                 "classification": "customer" if calc_spent > 0 else "prospect",
                 "total_spent": calc_spent,
                 "notes": p.get("comment") or "Account 200110 - Revenue From Operations (Odoo)",
-                "source": "odoo",
+                "source": "odoo_live",
                 "updated_at": now,
             }
             await db.customers.update_one({"id": cid}, {"$set": doc, "$setOnInsert": {"created_at": now, "total_orders": 1 if calc_spent > 0 else 0}}, upsert=True)
@@ -1579,7 +1579,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
 @api.post("/connectors/clear-dummy")
 async def clear_dummy_data(_: dict = Depends(get_current_user)):
     """Removes synthetic dummy seed data to keep only clean real data."""
-    deleted_c = await db.customers.delete_many({"source": {"$ne": "odoo"}})
+    deleted_c = await db.customers.delete_many({"source": {"$nin": ["odoo", "odoo_live"]}})
     deleted_r = await db.reminders.delete_many({})
     return {"deleted_customers": deleted_c.deleted_count, "deleted_reminders": deleted_r.deleted_count}
 
@@ -1588,7 +1588,7 @@ async def sync_connector(cid: str, _: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc).isoformat()
     if cid == "odoo":
         await _sync_odoo_live()
-    records = await db.customers.count_documents({"source": cid}) if cid in ("shopify", "odoo") else 0
+    records = await db.customers.count_documents({"source": {"$in": ["odoo", "odoo_live"]}}) if cid in ("shopify", "odoo") else 0
     await db.connectors.update_one({"id": cid},
                                    {"$set": {"last_sync": now, "records": records, "status": "connected"}},
                                    upsert=True)
@@ -2359,9 +2359,10 @@ async def startup():
     await seed_b2b_investors()
     await seed_tasks()
     await seed_documents()
-    # Kick off the scheduled-reminder poller
+    # Kick off the scheduled-reminder poller & automatic Odoo sync
     import asyncio as _asyncio
     _asyncio.create_task(_scheduled_reminder_worker())
+    _asyncio.create_task(_sync_odoo_live(clear_dummy=False))
 
 
 async def _scheduled_reminder_worker():
