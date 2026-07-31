@@ -1,0 +1,53 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    # Publish only if you want to hit MongoDB from the host — otherwise leave commented.
+    # ports:
+    #   - "27017:27017"
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      # Database
+      MONGO_URL: "mongodb://mongo:27017"
+      DB_NAME: "voyage_crm"
+      # Auth
+      JWT_SECRET: "${JWT_SECRET}"
+      # Admin seed (server auto-provisions on first boot)
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@voyageCRM.com}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-Admin@123}"
+      # CORS — comma-separated origins, or "*" for wildcard (regex)
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost}"
+      # LLM (Copilot) — supply Anthropic key for self-hosted install
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      ANTHROPIC_MODEL: "${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}"
+      # Email — supply Resend key for real delivery
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      RESEND_FROM: "${RESEND_FROM:-Voyage CRM <onboarding@resend.dev>}"
+      EMAIL_FROM_NAME: "${EMAIL_FROM_NAME:-Voyage CRM}"
+    # Not exposed to host directly — nginx in the frontend container proxies /api → backend:8001
+    expose:
+      - "8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # For same-origin deployments leave this empty — the SPA calls "/api/..." and nginx routes it.
+        REACT_APP_BACKEND_URL: "${REACT_APP_BACKEND_URL:-}"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${HTTP_PORT:-80}:80"
+
+volumes:
+  mongo_data:
