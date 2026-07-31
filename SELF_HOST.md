@@ -53,6 +53,10 @@ The complete list is in [`.env.example`](./.env.example). The important ones:
 | `FRONTEND_URL`        |          | Used inside password-reset email links.                                                       |
 | `REACT_APP_BACKEND_URL` |        | Leave **empty** for same-origin deployments (default). Only set if backend is on another host.|
 | `HTTP_PORT`           |          | The port on the host that maps to Nginx (default `80`).                                       |
+| `ODOO_API_KEY`        |          | API Key for Odoo ERP / POS integration.                                                       |
+| `ODOO_URL`            |          | URL of your Odoo server instance (e.g. `https://yourcompany.odoo.com`).                       |
+| `ODOO_DB`             |          | Database name of your Odoo instance.                                                         |
+| `ODOO_USERNAME`       |          | Username / email for your Odoo API account.                                                   |
 
 \* Technically the app can start without these two, but Copilot and email delivery won't work until they're set.
 

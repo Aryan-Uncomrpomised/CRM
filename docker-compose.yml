@@ -33,6 +33,11 @@ services:
       RESEND_API_KEY: "${RESEND_API_KEY:-}"
       RESEND_FROM: "${RESEND_FROM:-Voyage CRM <onboarding@resend.dev>}"
       EMAIL_FROM_NAME: "${EMAIL_FROM_NAME:-Voyage CRM}"
+      # Odoo Integration
+      ODOO_URL: "${ODOO_URL:-}"
+      ODOO_DB: "${ODOO_DB:-}"
+      ODOO_USERNAME: "${ODOO_USERNAME:-}"
+      ODOO_API_KEY: "${ODOO_API_KEY:-}"
     # Not exposed to host directly — nginx in the frontend container proxies /api → backend:8001
     expose:
       - "8001"
