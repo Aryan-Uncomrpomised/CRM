@@ -27,7 +27,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'voyage_crm')]
 
 JWT_ALGORITHM = "HS256"
-JWT_SECRET = os.environ["JWT_SECRET"]
+JWT_SECRET = os.environ.get("JWT_SECRET", "r4miVG81bQhr8Yq5uSUcTUM9_vwXfjLqYQXbFNy6fCktgWjI-1Bbfq4TWjweM1Xg")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
