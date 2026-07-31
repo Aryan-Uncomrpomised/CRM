@@ -1,6 +1,10 @@
 [build]
-  command = "if [ -d \"frontend\" ]; then cd frontend; fi && npm install --legacy-peer-deps && npm run build"
+  command = "if [ -d \"frontend\" ]; then cd frontend; fi && yarn install && yarn build"
   publish = "frontend/build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 [functions]
   directory = "netlify/functions"
