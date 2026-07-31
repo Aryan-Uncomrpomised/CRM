@@ -424,19 +424,24 @@ def can_view_category(user: dict, category: Optional[str]) -> bool:
 
 @api.get("/customers", response_model=List[Customer])
 async def list_customers(q: Optional[str] = None, classification: Optional[str] = None,
-                         category: Optional[str] = None,
+                         category: Optional[str] = None, source: Optional[str] = None,
                          current: dict = Depends(get_current_user)):
     is_admin = current.get("role") == "admin"
     query = {}
     if classification and classification != "all":
         query["classification"] = classification
     if category and category != "all":
-        if not can_view_category(current, category):
-            raise HTTPException(403, "Admin access required for this category")
-        query["category"] = category
+        if category == "odoo":
+            query["$or"] = [{"source": {"$in": ["odoo", "odoo_live"]}}, {"odoo_partner_id": {"$exists": True}}]
+        else:
+            if not can_view_category(current, category):
+                raise HTTPException(403, "Admin access required for this category")
+            query["category"] = category
     elif not is_admin:
         # Hide restricted categories from non-admins
         query["category"] = {"$nin": list(RESTRICTED_CATEGORIES)}
+    if source:
+        query["source"] = source
     if q:
         query["$or"] = [
             {"name": {"$regex": q, "$options": "i"}},

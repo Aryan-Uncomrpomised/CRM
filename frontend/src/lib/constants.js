@@ -8,6 +8,7 @@ export const CLASSIFICATIONS = [
 
 export const CATEGORIES = [
   { value: "consumer", label: "Consumer", desc: "D2C shopper" },
+  { value: "odoo", label: "Odoo Store Customers", desc: "Simplability Odoo SaaS (2,164 contacts)" },
   { value: "b2b", label: "B2B", desc: "Wholesale / retailer" },
   { value: "investor", label: "Investor", desc: "Angel or VC" },
   { value: "fund", label: "Fund", desc: "PE / Growth fund" },

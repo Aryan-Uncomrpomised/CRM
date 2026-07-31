@@ -54,7 +54,7 @@ export default function Customers() {
 
   const visibleCategories = isAdmin
     ? CATEGORIES
-    : CATEGORIES.filter((c) => c.value === "consumer");
+    : CATEGORIES.filter((c) => c.value === "consumer" || c.value === "odoo");
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", q, cls, category],
@@ -70,7 +70,7 @@ export default function Customers() {
       ).data,
   });
 
-  const isConsumer = category === "consumer";
+  const isConsumer = category === "consumer" || category === "odoo";
   const catMeta = CATEGORIES.find((c) => c.value === category);
 
   // Reset selection whenever the filter set changes
@@ -250,7 +250,7 @@ export default function Customers() {
               <div className="font-mono text-sm">{c.total_orders}</div>
               <div className="font-mono text-sm">{format(c.total_spent || 0, { digits: 0 })}</div>
               <div className="font-mono text-xs text-white/60">{fmtDate(c.last_order_at)}</div>
-              <div className="text-[11px] font-mono text-white/50 uppercase">{c.source}</div>
+              <div className="text-[11px] font-mono"><span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase">{c.source === 'odoo_live' || c.odoo_partner_id ? 'Odoo Live' : c.source}</span></div>
             </div>
           ) : (
             <div
