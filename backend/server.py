@@ -1579,7 +1579,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
             if not p.get("name"):
                 continue
             cid = f"odoo_{p['id']}"
-            calc_spent = round(max(0.0, sales_by_partner.get(p['id'], p.get('total_invoiced') or 0.0)), 2)
+            calc_spent = round(max(0.0, float(p.get('total_invoiced') if p.get('total_invoiced') is not None else sales_by_partner.get(p['id'], 0.0))), 2)
             calc_orders = orders_by_partner.get(p['id'], 1 if calc_spent > 0 else 0)
             doc = {
                 "id": cid,
