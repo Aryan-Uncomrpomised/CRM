@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-export const API = BACKEND_URL ? `${BACKEND_URL.replace(/\/$/, '')}/api` : "/api";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://crm-w6ry.onrender.com";
+export const API = `${BACKEND_URL.replace(/\/$/, '')}/api`;
 
 export const api = axios.create({
   baseURL: API,
