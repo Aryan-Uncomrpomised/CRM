@@ -339,6 +339,7 @@ class UserCreate(BaseModel):
 class SignupIn(BaseModel):
     email: EmailStr
     name: str
+    password: str
 
 class Notification(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -1275,32 +1276,41 @@ async def delete_user(uid: str, current: dict = Depends(get_current_user)):
 # Public sign-up
 # -----------------------------------------------------------------------------
 @api.post("/auth/signup")
-async def signup(body: SignupIn):
+async def signup(body: SignupIn, response: Response):
     email = body.email.lower().strip()
-    if not is_official_email(email):
-        raise HTTPException(400, "Please use an official work email (free email providers are not allowed).")
     name = body.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
+    if not body.password or len(body.password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "A user with this email already exists.")
+    
+    total_users = await db.users.count_documents({})
+    role = "admin" if total_users == 0 else "member"
+    
     doc = {
         "id": str(uuid.uuid4()),
         "email": email,
         "name": name,
-        "role": "member",
-        "status": "pending",
-        "password_hash": None,
+        "role": role,
+        "status": "active",
+        "password_hash": hash_password(body.password),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(doc)
-    # Notify all admins
+    
+    access = create_access_token(doc["id"], doc["email"])
+    refresh = create_refresh_token(doc["id"])
+    set_auth_cookies(response, access, refresh)
+    
     admins = await db.users.find({"role": "admin"}, {"_id": 0, "name": 1}).to_list(50)
     for a in admins:
         await notify(a["name"], "user_signup",
-                     f"Sign-up request: {name}",
-                     f"{email} · awaiting your approval")
-    return {"ok": True}
+                     f"New user registered: {name}",
+                     f"{email} · {role}")
+                     
+    return {"id": doc["id"], "email": doc["email"], "name": doc["name"], "role": doc["role"]}
 
 # -----------------------------------------------------------------------------
 # Notifications

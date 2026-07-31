@@ -164,7 +164,7 @@ export default function Login() {
                   data-testid="signup-link"
                   className="block text-xs font-mono text-white/50 hover:text-white/80"
                 >
-                  Don't have an account? <span className="text-white">Request access →</span>
+                  Don't have an account? <span className="text-white">Create account →</span>
                 </Link>
               </div>
             </div>
