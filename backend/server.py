@@ -22,7 +22,13 @@ from pydantic import BaseModel, Field, EmailStr
 # -----------------------------------------------------------------------------
 # Config
 # -----------------------------------------------------------------------------
-mongo_url = os.environ.get('MONGO_URL', 'mongodb+srv://aryansaxena941_db_user:TVrTbBPkNPUW83z2@cluster0.h8sdvpb.mongodb.net/voyage_crm?retryWrites=true&w=majority&appName=Cluster0')
+DEFAULT_MONGO_URL = 'mongodb+srv://aryansaxena941_db_user:TVrTbBPkNPUW83z2@cluster0.h8sdvpb.mongodb.net/voyage_crm?retryWrites=true&w=majority&appName=Cluster0'
+raw_mongo_url = os.environ.get('MONGO_URL', '').strip().strip('"').strip("'")
+if not raw_mongo_url.startswith(('mongodb://', 'mongodb+srv://')):
+    mongo_url = DEFAULT_MONGO_URL
+else:
+    mongo_url = raw_mongo_url
+
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'voyage_crm')]
 
