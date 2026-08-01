@@ -257,7 +257,6 @@ export default function Customers() {
               )}
             </div>
           </div>
-          </div>
         ))}
         {customers.length === 0 && (
           <div className="p-8 text-center text-white/40 font-mono text-sm">
