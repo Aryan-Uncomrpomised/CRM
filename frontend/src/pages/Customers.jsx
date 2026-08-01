@@ -46,7 +46,7 @@ export default function Customers() {
   const isAdmin = user?.role === "admin";
   const [q, setQ] = useState("");
   const [cls, setCls] = useState("all");
-  const [category, setCategory] = useState("consumer");
+  const [category, setCategory] = useState("b2c");
   const [openId, setOpenId] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState(() => new Set());

@@ -148,7 +148,8 @@ class Customer(BaseModel):
     email: Optional[str] = ""
     phone: Optional[str] = None
     country: Optional[str] = None
-    category: Category = "consumer"
+    category: str = "b2c"
+    categories: List[str] = []
     company: Optional[str] = None
     title: Optional[str] = None
     linkedin_url: Optional[str] = None
@@ -413,13 +414,9 @@ async def logout(response: Response):
 # -----------------------------------------------------------------------------
 # Customers
 # -----------------------------------------------------------------------------
-RESTRICTED_CATEGORIES = {"b2b", "investor", "fund"}
+RESTRICTED_CATEGORIES = set()
 
 def can_view_category(user: dict, category: Optional[str]) -> bool:
-    if not category or category == "consumer":
-        return True
-    if category in RESTRICTED_CATEGORIES:
-        return user.get("role") == "admin"
     return True
 
 @api.get("/customers", response_model=List[Customer])
@@ -433,11 +430,13 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
     if category and category != "all":
         if category == "odoo":
             query["$or"] = [{"source": {"$in": ["odoo", "odoo_live"]}}, {"odoo_partner_id": {"$exists": True}}]
-        elif category == "consumer":
+        elif category in ["b2c", "consumer"]:
             query["$or"] = [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]
+        elif category in ["events", "event"]:
+            query["$or"] = [{"categories": {"$in": ["events", "event"]}}, {"category": {"$in": ["events", "event"]}}]
+        elif category == "website":
+            query["$or"] = [{"categories": "website"}, {"category": "website"}, {"source": "shopify"}]
         else:
-            if not can_view_category(current, category):
-                raise HTTPException(403, "Admin access required for this category")
             query["$or"] = [{"categories": category}, {"category": category}]
     elif not is_admin:
         # Hide restricted categories from non-admins
