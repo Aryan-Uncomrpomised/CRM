@@ -52,9 +52,7 @@ export default function Customers() {
   const [selected, setSelected] = useState(() => new Set());
   const [bulkMode, setBulkMode] = useState(null); // "send" | "tasks" | null
 
-  const visibleCategories = isAdmin
-    ? CATEGORIES
-    : CATEGORIES.filter((c) => c.value === "consumer" || c.value === "odoo");
+  const visibleCategories = CATEGORIES;
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", q, cls, category],
@@ -70,7 +68,7 @@ export default function Customers() {
       ).data,
   });
 
-  const isConsumer = category === "consumer" || category === "odoo";
+  const isConsumer = category !== "b2b";
   const catMeta = CATEGORIES.find((c) => c.value === category);
 
   // Reset selection whenever the filter set changes
@@ -242,7 +240,14 @@ export default function Customers() {
                   </div>
                 )}
                 <div className="min-w-0">
-                  <div className="text-[14px] font-medium truncate">{c.name}</div>
+                  <div className="text-[14px] font-medium truncate flex items-center gap-2">
+                    <span>{c.name}</span>
+                    {c.tags && c.tags.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
+                        {c.tags[0]}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[11.5px] text-white/40 font-mono truncate">{c.email}</div>
                 </div>
               </div>

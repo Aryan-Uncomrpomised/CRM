@@ -7,11 +7,15 @@ export const CLASSIFICATIONS = [
 ];
 
 export const CATEGORIES = [
-  { value: "consumer", label: "Consumer", desc: "D2C shopper" },
-  { value: "odoo", label: "Odoo Store Customers", desc: "Simplability Odoo SaaS (2,164 contacts)" },
-  { value: "b2b", label: "B2B", desc: "Wholesale / retailer" },
+  { value: "b2c", label: "B2C", desc: "V-Fresh B2C & D2C shoppers" },
+  { value: "b2b", label: "B2B", desc: "V-Fresh B2B & Wholesale" },
+  { value: "website", label: "Website", desc: "Shopify & Web Store" },
+  { value: "cac", label: "CAC", desc: "Acquisition Channels (IG, WA, Tapri)" },
+  { value: "events", label: "Event", desc: "V-Gather Events" },
+  { value: "grow", label: "Grow", desc: "V-Grow Farming & Ops" },
   { value: "investor", label: "Investor", desc: "Angel or VC" },
   { value: "fund", label: "Fund", desc: "PE / Growth fund" },
+  { value: "odoo", label: "All Odoo Contacts", desc: "Simplability Odoo SaaS (2,142 contacts)" },
 ];
 
 export const TASK_STATUS = [

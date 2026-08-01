@@ -433,10 +433,12 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
     if category and category != "all":
         if category == "odoo":
             query["$or"] = [{"source": {"$in": ["odoo", "odoo_live"]}}, {"odoo_partner_id": {"$exists": True}}]
+        elif category == "consumer":
+            query["$or"] = [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]
         else:
             if not can_view_category(current, category):
                 raise HTTPException(403, "Admin access required for this category")
-            query["category"] = category
+            query["$or"] = [{"categories": category}, {"category": category}]
     elif not is_admin:
         # Hide restricted categories from non-admins
         query["category"] = {"$nin": list(RESTRICTED_CATEGORIES)}
