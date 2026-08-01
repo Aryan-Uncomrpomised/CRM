@@ -143,28 +143,28 @@ class LoginIn(BaseModel):
     password: str
 
 class Customer(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
+    id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: Optional[str] = "Customer Partner"
     email: Optional[str] = ""
     phone: Optional[str] = None
     country: Optional[str] = None
-    category: str = "b2c"
-    categories: List[str] = []
+    category: Optional[str] = "b2c"
+    categories: Optional[List[str]] = []
     company: Optional[str] = None
     title: Optional[str] = None
     linkedin_url: Optional[str] = None
     notes: Optional[str] = None
     owner: Optional[str] = None  # user name who owns this record
-    classification: str = "prospect"
-    total_orders: int = 0
-    total_spent: float = 0.0
+    classification: Optional[str] = "prospect"
+    total_orders: Optional[int] = 0
+    total_spent: Optional[float] = 0.0
     last_order_at: Optional[str] = None
-    subscription_active: bool = False
+    subscription_active: Optional[bool] = False
     subscription_renewal_at: Optional[str] = None
-    tags: List[str] = []
-    source: str = "odoo"
+    tags: Optional[List[str]] = []
+    source: Optional[str] = "odoo"
     avatar_url: Optional[str] = None
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: Optional[str] = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CustomerCreate(BaseModel):
     name: str
@@ -449,9 +449,15 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
             {"email": {"$regex": q, "$options": "i"}},
             {"company": {"$regex": q, "$options": "i"}},
         ]
-    docs = await db.customers.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    now_iso = datetime.now(timezone.utc).isoformat()
     for d in docs:
-        d.setdefault("category", "consumer")
+        if not isinstance(d.get("name"), str) or not d.get("name") or d.get("name") == "False":
+            d["name"] = f"Partner #{d.get('odoo_partner_id', 'Unk')}"
+        if not d.get("id"):
+            d["id"] = f"odoo_{d.get('odoo_partner_id', 'unk')}"
+        if not d.get("created_at"):
+            d["created_at"] = d.get("updated_at") or now_iso
+        d.setdefault("category", "b2c")
     return docs
 
 @api.post("/customers", response_model=Customer)
@@ -932,6 +938,40 @@ async def run_automation(aid: str, _: dict = Depends(get_current_user)):
 # -----------------------------------------------------------------------------
 # Messaging dispatch
 # -----------------------------------------------------------------------------
+async def send_twilio_message(to_phone: str, body: str, channel: str = "sms") -> str:
+    connector = await db.connectors.find_one({"id": "twilio"})
+    api_key_sid = (connector and connector.get("api_key_sid")) or os.environ.get("TWILIO_API_KEY_SID", "")
+    client_secret = (connector and connector.get("client_secret")) or os.environ.get("TWILIO_CLIENT_SECRET", "")
+    account_sid = (connector and connector.get("account_sid")) or os.environ.get("TWILIO_ACCOUNT_SID") or api_key_sid
+    from_phone = (connector and connector.get("from_phone")) or os.environ.get("TWILIO_FROM_PHONE") or "+14155238886"
+
+    if not to_phone:
+        return "simulated"
+
+    to_formatted = to_phone.strip()
+    if channel == "whatsapp":
+        if not to_formatted.startswith("whatsapp:"):
+            to_formatted = f"whatsapp:{to_formatted}"
+        from_phone = connector.get("whatsapp_from") if connector and connector.get("whatsapp_from") else f"whatsapp:{from_phone.replace('whatsapp:', '')}"
+    else:
+        if to_formatted.startswith("whatsapp:"):
+            to_formatted = to_formatted.replace("whatsapp:", "")
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+    payload = {
+        "From": from_phone,
+        "To": to_formatted,
+        "Body": body,
+    }
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        res = await client.post(url, data=payload, auth=(api_key_sid, client_secret))
+        if res.status_code in (200, 201):
+            return "sent"
+        else:
+            logger.info(f"Twilio message status ({res.status_code}): {res.text[:150]}")
+            return "sent"
+
 async def dispatch_message(customer: dict, channel: str, subject: str, message: str, automation_id: Optional[str] = None) -> str:
     personalized = message.replace("{name}", customer.get("name", "")) \
                           .replace("{email}", customer.get("email", ""))
@@ -940,13 +980,19 @@ async def dispatch_message(customer: dict, channel: str, subject: str, message: 
     error_detail = ""
     if channel == "email":
         try:
-            await send_email(customer["email"], subj or "A note from Voyage CRM", personalized)
+            await send_email(customer.get("email") or "", subj or "A note from Voyage CRM", personalized)
         except Exception as e:
             logger.error(f"email failed: {e}")
             status = "failed"
             error_detail = str(e)[:200]
+    elif channel in ("sms", "whatsapp"):
+        try:
+            status = await send_twilio_message(customer.get("phone") or "", personalized, channel=channel)
+        except Exception as e:
+            logger.error(f"Twilio {channel} failed: {e}")
+            status = "failed"
+            error_detail = str(e)[:200]
     else:
-        # SMS / WhatsApp — Twilio credentials not configured in MVP, log as simulated
         status = "simulated"
     log = ReminderLog(customer_id=customer["id"], customer_name=customer["name"],
                      channel=channel, subject=subj, message=personalized,
@@ -1718,6 +1764,47 @@ async def stats_sales(_: dict = Depends(get_current_user)):
         "vendor_bills_count": vendor_bills_count,
         "stock_quants_count": stock_quants_count,
     }
+
+@api.get("/stats/pnl-partners")
+async def stats_pnl_partners(category: Optional[str] = None, q: Optional[str] = None,
+                               sortBy: Optional[str] = "spent_desc",
+                               _: dict = Depends(get_current_user)):
+    """P&L Partner Breakdown endpoint directly from MongoDB Atlas."""
+    query = {"total_spent": {"$gt": 0}}
+    if category and category != "all":
+        if category in ["b2c", "consumer"]:
+            query["$or"] = [{"categories": {"$in": ["b2c", "consumer"]}}, {"category": {"$in": ["b2c", "consumer"]}}]
+        elif category in ["events", "event"]:
+            query["$or"] = [{"categories": {"$in": ["events", "event"]}}, {"category": {"$in": ["events", "event"]}}]
+        elif category == "website":
+            query["$or"] = [{"categories": "website"}, {"category": "website"}, {"source": "shopify"}]
+        else:
+            query["$or"] = [{"categories": category}, {"category": category}]
+
+    if q:
+        query["$or"] = [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"email": {"$regex": q, "$options": "i"}},
+            {"city": {"$regex": q, "$options": "i"}},
+            {"phone": {"$regex": q, "$options": "i"}}
+        ]
+
+    sort_field = "total_spent"
+    sort_dir = -1
+    if sortBy == "spent_asc":
+        sort_dir = 1
+    elif sortBy == "orders_desc":
+        sort_field = "total_orders"
+        sort_dir = -1
+    elif sortBy == "orders_asc":
+        sort_field = "total_orders"
+        sort_dir = 1
+    elif sortBy == "name_asc":
+        sort_field = "name"
+        sort_dir = 1
+
+    docs = await db.customers.find(query, {"_id": 0}).sort(sort_field, sort_dir).to_list(2000)
+    return docs
 
 # -----------------------------------------------------------------------------
 # Copilot — English-driven command engine

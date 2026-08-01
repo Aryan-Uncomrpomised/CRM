@@ -66,6 +66,9 @@ export default function Customers() {
           },
         })
       ).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const isConsumer = category !== "b2b";
