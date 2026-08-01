@@ -9,13 +9,29 @@ export const CLASSIFICATIONS = [
 export const CATEGORIES = [
   { value: "b2c", label: "B2C", desc: "V-Fresh B2C & D2C shoppers" },
   { value: "b2b", label: "B2B", desc: "V-Fresh B2B & Wholesale" },
-  { value: "website", label: "Website", desc: "Shopify & Web Store" },
-  { value: "cac", label: "CAC", desc: "Acquisition Channels (IG, WA, Tapri)" },
-  { value: "events", label: "Event", desc: "V-Gather Events" },
-  { value: "grow", label: "Grow", desc: "V-Grow Farming & Ops" },
   { value: "investor", label: "Investor", desc: "Angel or VC" },
   { value: "fund", label: "Fund", desc: "PE / Growth fund" },
-  { value: "odoo", label: "All Odoo Contacts", desc: "Simplability Odoo SaaS (2,142 contacts)" },
+];
+
+export const ODOO_TAGS = [
+  "V-Fresh B2C",
+  "V-Fresh B2B",
+  "CAC-Instagram",
+  "CAC-Whatsapp",
+  "CAC-Word of Mouth",
+  "CAC-Outdoor Advt.",
+  "CAC-Tapri",
+  "CAC-Roots POS #00002",
+  "CAC-Linked In",
+  "CAC-Gather",
+  "CAC-Outreach",
+  "CAC-Gather-Collab",
+  "V-Gather",
+  "V-Grow",
+  "PCA-Kids",
+  "PCA-B2BCollab",
+  "MSME",
+  "Vendor",
 ];
 
 export const TASK_STATUS = [

@@ -422,25 +422,19 @@ def can_view_category(user: dict, category: Optional[str]) -> bool:
 @api.get("/customers", response_model=List[Customer])
 async def list_customers(q: Optional[str] = None, classification: Optional[str] = None,
                          category: Optional[str] = None, source: Optional[str] = None,
+                         tag: Optional[str] = None,
                          current: dict = Depends(get_current_user)):
     is_admin = current.get("role") == "admin"
     query = {}
     if classification and classification != "all":
         query["classification"] = classification
     if category and category != "all":
-        if category == "odoo":
-            query["$or"] = [{"source": {"$in": ["odoo", "odoo_live"]}}, {"odoo_partner_id": {"$exists": True}}]
-        elif category in ["b2c", "consumer"]:
+        if category in ["b2c", "consumer"]:
             query["$or"] = [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]
-        elif category in ["events", "event"]:
-            query["$or"] = [{"categories": {"$in": ["events", "event"]}}, {"category": {"$in": ["events", "event"]}}]
-        elif category == "website":
-            query["$or"] = [{"categories": "website"}, {"category": "website"}, {"source": "shopify"}]
         else:
             query["$or"] = [{"categories": category}, {"category": category}]
-    elif not is_admin:
-        # Hide restricted categories from non-admins
-        query["category"] = {"$nin": list(RESTRICTED_CATEGORIES)}
+    if tag and tag != "all":
+        query["tags"] = tag
     if source:
         query["source"] = source
     if q:
@@ -448,6 +442,7 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
             {"name": {"$regex": q, "$options": "i"}},
             {"email": {"$regex": q, "$options": "i"}},
             {"company": {"$regex": q, "$options": "i"}},
+            {"phone": {"$regex": q, "$options": "i"}},
         ]
     now_iso = datetime.now(timezone.utc).isoformat()
     for d in docs:

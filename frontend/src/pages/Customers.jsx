@@ -156,174 +156,109 @@ export default function Customers() {
           data-testid="customers-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={isConsumer ? "Search by name or email" : "Search by name, email, or company"}
-          className="max-w-sm h-9 bg-white/[0.03] border-white/10 text-sm"
+          placeholder="Search by name, email, phone, or company"
+          className="max-w-xs h-9 bg-white/[0.03] border-white/10 text-sm"
         />
-        {isConsumer && (
-          <Tabs value={cls} onValueChange={setCls}>
-            <TabsList className="bg-white/[0.03] border border-white/10">
-              <TabsTrigger value="all" data-testid="tab-all">All</TabsTrigger>
-              {CLASSIFICATIONS.map((c) => (
-                <TabsTrigger
-                  key={c.value}
-                  value={c.value}
-                  data-testid={`tab-${c.value}`}
-                >
-                  {c.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
+        <div className="flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-md px-3 py-1.5 h-9">
+          <span className="text-xs font-mono text-white/50 uppercase">Tag:</span>
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="bg-transparent text-xs font-mono text-white/90 focus:outline-none cursor-pointer"
+          >
+            <option value="all" className="bg-neutral-900">All Tags</option>
+            {ODOO_TAGS.map((t) => (
+              <option key={t} value={t} className="bg-neutral-900">{t}</option>
+            ))}
+          </select>
+        </div>
+        <Tabs value={cls} onValueChange={setCls}>
+          <TabsList className="bg-white/[0.03] border border-white/10">
+            <TabsTrigger value="all" data-testid="tab-all">All</TabsTrigger>
+            {CLASSIFICATIONS.map((c) => (
+              <TabsTrigger
+                key={c.value}
+                value={c.value}
+                data-testid={`tab-${c.value}`}
+              >
+                {c.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="border border-white/[0.08] rounded-md overflow-hidden bg-[color:var(--vc-surface)]">
-        {isConsumer ? (
-          <div className="grid grid-cols-[36px_3fr_1.6fr_1fr_1fr_1fr_1fr] text-[10.5px] font-mono uppercase tracking-widest text-white/40 px-4 py-2.5 border-b border-white/[0.06] items-center">
-            <div>
+        <div className="grid grid-cols-[36px_2.2fr_1.4fr_1.8fr_1.2fr_0.9fr_1fr_1fr_1fr_1.4fr] text-[10.5px] font-mono uppercase tracking-widest text-white/40 px-4 py-2.5 border-b border-white/[0.06] items-center">
+          <div>
+            <input
+              type="checkbox"
+              data-testid="select-all"
+              checked={selected.size > 0 && selected.size === customers.length}
+              onChange={toggleAll}
+              aria-label="Select all"
+            />
+          </div>
+          <div>Customer</div>
+          <div>Contact No</div>
+          <div>Email</div>
+          <div>Stage</div>
+          <div>Orders</div>
+          <div>Spent</div>
+          <div>Last order</div>
+          <div>Source</div>
+          <div>Tag</div>
+        </div>
+        {customers.map((c) => (
+          <div
+            key={c.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => setOpenId(c.id)}
+            onKeyDown={(e) => { if (e.key === "Enter") setOpenId(c.id); }}
+            data-testid={`row-customer-${c.id}`}
+            className="w-full grid grid-cols-[36px_2.2fr_1.4fr_1.8fr_1.2fr_0.9fr_1fr_1fr_1fr_1.4fr] items-center px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.03] text-left cursor-pointer"
+          >
+            <div onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
-                data-testid="select-all"
-                checked={selected.size > 0 && selected.size === customers.length}
-                onChange={toggleAll}
-                aria-label="Select all"
+                data-testid={`select-${c.id}`}
+                checked={selected.has(c.id)}
+                onChange={() => toggleSelect(c.id)}
+                aria-label={`Select ${c.name}`}
               />
             </div>
-            <div>Customer</div>
-            <div>Stage</div>
-            <div>Orders</div>
-            <div>Spent</div>
-            <div>Last order</div>
-            <div>Source</div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[36px_3fr_2fr_2fr_1fr_1fr] text-[10.5px] font-mono uppercase tracking-widest text-white/40 px-4 py-2.5 border-b border-white/[0.06] items-center">
-            <div>
-              <input
-                type="checkbox"
-                data-testid="select-all"
-                checked={selected.size > 0 && selected.size === customers.length}
-                onChange={toggleAll}
-                aria-label="Select all"
-              />
-            </div>
-            <div>Name</div>
-            <div>Company · title</div>
-            <div>Contact</div>
-            <div>Country</div>
-            <div>LinkedIn</div>
-          </div>
-        )}
-        {customers.map((c) =>
-          isConsumer ? (
-            <div
-              key={c.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setOpenId(c.id)}
-              onKeyDown={(e) => { if (e.key === "Enter") setOpenId(c.id); }}
-              data-testid={`row-customer-${c.id}`}
-              className="w-full grid grid-cols-[36px_3fr_1.6fr_1fr_1fr_1fr_1fr] items-center px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.03] text-left cursor-pointer"
-            >
-              <div onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  data-testid={`select-${c.id}`}
-                  checked={selected.has(c.id)}
-                  onChange={() => toggleSelect(c.id)}
-                  aria-label={`Select ${c.name}`}
-                />
-              </div>
-              <div className="flex items-center gap-3 min-w-0">
-                {c.avatar_url ? (
-                  <img src={c.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-display font-bold text-sm">
-                    {c.name[0]}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium truncate flex items-center gap-2">
-                    <span>{c.name}</span>
-                    {c.tags && c.tags.length > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
-                        {c.tags[0]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11.5px] text-white/40 font-mono truncate">{c.email}</div>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {c.avatar_url ? (
+                <img src={c.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center font-display font-bold text-xs shrink-0">
+                  {c.name ? c.name[0] : "C"}
                 </div>
-              </div>
-              <div>{classTag(c.classification)}</div>
-              <div className="font-mono text-sm">{c.total_orders}</div>
-              <div className="font-mono text-sm">{format(c.total_spent || 0, { digits: 0 })}</div>
-              <div className="font-mono text-xs text-white/60">{fmtDate(c.last_order_at)}</div>
-              <div className="text-[11px] font-mono"><span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase">{c.source === 'odoo_live' || c.odoo_partner_id ? 'Odoo Live' : c.source}</span></div>
+              )}
+              <span className="text-[13.5px] font-medium truncate text-white">{c.name}</span>
             </div>
-          ) : (
-            <div
-              key={c.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setOpenId(c.id)}
-              onKeyDown={(e) => { if (e.key === "Enter") setOpenId(c.id); }}
-              data-testid={`row-customer-${c.id}`}
-              className="w-full grid grid-cols-[36px_3fr_2fr_2fr_1fr_1fr] items-center px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.03] text-left cursor-pointer"
-            >
-              <div onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  data-testid={`select-${c.id}`}
-                  checked={selected.has(c.id)}
-                  onChange={() => toggleSelect(c.id)}
-                  aria-label={`Select ${c.name}`}
-                />
-              </div>
-              <div className="flex items-center gap-3 min-w-0">
-                {c.avatar_url ? (
-                  <img src={c.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-display font-bold text-sm">
-                    {c.name[0]}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium truncate">{c.name}</div>
-                  <span className={`classification-tag tag-${c.category === "b2b" ? "customer" : c.category === "investor" ? "prospect" : "subscriber"}`}>
-                    {c.category}
+            <div className="font-mono text-xs text-emerald-400 font-semibold truncate">{c.phone || "—"}</div>
+            <div className="font-mono text-xs text-white/50 truncate">{c.email || "—"}</div>
+            <div>{classTag(c.classification)}</div>
+            <div className="font-mono text-sm text-white">{c.total_orders || 0}</div>
+            <div className="font-mono text-sm font-bold text-emerald-400">{format(c.total_spent || 0, { digits: 0 })}</div>
+            <div className="font-mono text-xs text-white/60">{fmtDate(c.last_order_at)}</div>
+            <div className="text-[11px] font-mono"><span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase">{c.source === 'odoo_live' || c.odoo_partner_id ? 'Odoo Live' : c.source}</span></div>
+            <div className="flex flex-wrap gap-1">
+              {(c.tags && c.tags.length > 0) ? (
+                c.tags.slice(0, 2).map((t, idx) => (
+                  <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
+                    {t}
                   </span>
-                </div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[13.5px] truncate flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-white/40" />
-                  {c.company || "—"}
-                </div>
-                <div className="text-[11.5px] text-white/40 truncate">{c.title || "—"}</div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[12px] font-mono text-white/70 truncate">{c.email}</div>
-                <div className="text-[11px] font-mono text-white/40 truncate">{c.phone || "—"}</div>
-              </div>
-              <div className="text-[12px] text-white/60">{c.country || "—"}</div>
-              <div>
-                {c.linkedin_url ? (
-                  <a
-                    href={c.linkedin_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 text-[11.5px] text-sky-300 hover:underline"
-                  >
-                    <Linkedin className="w-3 h-3" /> open
-                  </a>
-                ) : (
-                  <span className="text-white/30 text-xs">—</span>
-                )}
-              </div>
+                ))
+              ) : (
+                <span className="text-[10px] text-white/30 font-mono">—</span>
+              )}
             </div>
-          ),
-        )}
+          </div>
+          </div>
+        ))}
         {customers.length === 0 && (
           <div className="p-8 text-center text-white/40 font-mono text-sm">
             No contacts match. Adjust filters or add one.

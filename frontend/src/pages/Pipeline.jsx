@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, formatApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
-import { CATEGORIES, CLASSIFICATIONS, fmtDate } from "@/lib/constants";
+import { CATEGORIES, CLASSIFICATIONS, ODOO_TAGS, fmtDate } from "@/lib/constants";
 import { toast } from "sonner";
 import { Kanban, Lock, User as UserIcon, Mail, Building2 } from "lucide-react";
 
@@ -34,8 +34,8 @@ const INVESTOR_STAGES = [
 ];
 
 const PIPELINES = {
-  consumer: { label: "Retail", stages: RETAIL_STAGES },
-  b2b:      { label: "B2B",    stages: B2B_STAGES },
+  b2c:      { label: "B2C",      stages: RETAIL_STAGES },
+  b2b:      { label: "B2B",      stages: B2B_STAGES },
   investor: { label: "Investor", stages: INVESTOR_STAGES },
   fund:     { label: "Fund",     stages: INVESTOR_STAGES },
 };
@@ -45,20 +45,22 @@ export default function Pipeline() {
   const { user } = useAuth();
   const { format } = useCurrency();
   const isAdmin = user?.role === "admin";
-  const [category, setCategory] = useState("consumer");
+  const [category, setCategory] = useState("b2c");
+  const [tagFilter, setTagFilter] = useState("all");
   const [dropTarget, setDropTarget] = useState(null);
 
-  const visibleCategories = isAdmin
-    ? CATEGORIES
-    : CATEGORIES.filter((c) => c.value === "consumer");
+  const visibleCategories = CATEGORIES;
 
   const { data: customers = [] } = useQuery({
-    queryKey: ["pipeline-customers", category],
+    queryKey: ["pipeline-customers", category, tagFilter],
     queryFn: async () =>
-      (await api.get("/customers", { params: { category, limit: 500 } })).data,
+      (await api.get("/customers", { params: { category, tag: tagFilter === "all" ? undefined : tagFilter, limit: 500 } })).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
-  const pipeline = PIPELINES[category] || PIPELINES.consumer;
+  const pipeline = PIPELINES[category] || PIPELINES.b2c;
 
   const grouped = useMemo(() => {
     const g = Object.fromEntries(pipeline.stages.map((s) => [s.value, []]));
@@ -129,26 +131,42 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Category picker */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {visibleCategories.map((c) => (
-          <button
-            key={c.value}
-            data-testid={`pipeline-cat-${c.value}`}
-            onClick={() => setCategory(c.value)}
-            className={`text-left px-3.5 py-3 rounded-md border transition-colors ${
-              category === c.value
-                ? "border-white/30 bg-white/[0.06]"
-                : "border-white/[0.08] hover:bg-white/[0.03]"
-            }`}
+      {/* Category picker & Tag Filter */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+          {visibleCategories.map((c) => (
+            <button
+              key={c.value}
+              data-testid={`pipeline-cat-${c.value}`}
+              onClick={() => setCategory(c.value)}
+              className={`text-left px-3.5 py-3 rounded-md border transition-colors ${
+                category === c.value
+                  ? "border-white/30 bg-white/[0.06]"
+                  : "border-white/[0.08] hover:bg-white/[0.03]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-display font-bold text-base">{c.label}</span>
+                {c.value !== "b2c" && <Lock className="w-3 h-3 text-white/30" />}
+              </div>
+              <div className="text-[11.5px] text-white/50 mt-0.5">{c.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-md px-3 py-2 shrink-0">
+          <span className="text-xs font-mono text-white/50 uppercase">Filter Tag:</span>
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="bg-transparent text-xs font-mono text-white/90 focus:outline-none cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <span className="font-display font-bold text-base">{c.label}</span>
-              {c.value !== "consumer" && <Lock className="w-3 h-3 text-white/30" />}
-            </div>
-            <div className="text-[11.5px] text-white/50 mt-0.5">{c.desc}</div>
-          </button>
-        ))}
+            <option value="all" className="bg-neutral-900">All Tags</option>
+            {ODOO_TAGS.map((t) => (
+              <option key={t} value={t} className="bg-neutral-900">{t}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Kanban board */}
