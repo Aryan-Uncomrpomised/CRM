@@ -116,11 +116,7 @@ export default function SalesDashboard() {
 
   const totalPnlRevenue = s.total_sales_revenue || 5122430.36;
 
-  // Filtered totals
-  const filteredTotalSpent = useMemo(
-    () => pnlPartners.reduce((acc, c) => acc + (c.total_spent || 0), 0),
-    [pnlPartners]
-  );
+
 
   return (
     <div className="p-8 space-y-8" data-testid="sales-dashboard-page">
