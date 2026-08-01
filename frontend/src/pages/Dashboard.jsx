@@ -41,6 +41,9 @@ export default function Dashboard() {
   const { data } = useQuery({
     queryKey: ["stats"],
     queryFn: async () => (await api.get("/stats/overview")).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const s = data || {

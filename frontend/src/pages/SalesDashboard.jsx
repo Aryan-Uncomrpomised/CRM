@@ -54,11 +54,17 @@ export default function SalesDashboard() {
   const { data: sales } = useQuery({
     queryKey: ["sales-stats"],
     queryFn: async () => (await api.get("/stats/sales")).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers-pnl"],
     queryFn: async () => (await api.get("/customers")).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const s = sales || {
