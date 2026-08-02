@@ -1,5 +1,5 @@
 [build]
-  command = "if [ -d \"frontend\" ]; then cd frontend; fi && yarn install && CI=false yarn build"
+  command = "cd frontend && yarn install && CI=false yarn build"
   publish = "frontend/build"
 
 [build.environment]
