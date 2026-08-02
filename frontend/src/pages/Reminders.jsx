@@ -12,10 +12,15 @@ const STATUS_ICON = {
 };
 
 export default function Reminders() {
-  const { data: rows = [] } = useQuery({
+  const { data: rawRows = [] } = useQuery({
     queryKey: ["reminders"],
     queryFn: async () => (await api.get("/reminders")).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
+
+  const rows = Array.isArray(rawRows) ? rawRows : [];
 
   return (
     <div className="p-8 space-y-6" data-testid="reminders-page">

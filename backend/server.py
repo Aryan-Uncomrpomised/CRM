@@ -1048,7 +1048,18 @@ async def send_email(to: str, subject: str, html: str) -> None:
 # -----------------------------------------------------------------------------
 @api.get("/reminders", response_model=List[ReminderLog])
 async def list_reminders(_: dict = Depends(get_current_user)):
-    return await db.reminders.find({}, {"_id": 0}).sort("at", -1).to_list(500)
+    reminders = await db.reminders.find({}, {"_id": 0}).sort("at", -1).to_list(500)
+    cust_ids = list({r.get("customer_id") for r in reminders if r.get("customer_id")})
+    if cust_ids:
+        custs = await db.customers.find({"id": {"$in": cust_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(len(cust_ids))
+        id_to_name = {c["id"]: c.get("name") for c in custs if c.get("name") and c.get("name") != "False"}
+        for r in reminders:
+            real_name = id_to_name.get(r.get("customer_id"))
+            if real_name:
+                r["customer_name"] = real_name
+            elif not r.get("customer_name") or r.get("customer_name") in ["False", "None"]:
+                r["customer_name"] = f"Customer #{r.get('customer_id', 'unk')}"
+    return reminders
 
 # -----------------------------------------------------------------------------
 # Send test message (from a customer detail action)
