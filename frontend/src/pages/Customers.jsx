@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, formatApiError } from "@/lib/api";
-import { CLASSIFICATIONS, CATEGORIES, EVENT_LABELS, fmtDate, fmtDateTime, relTime } from "@/lib/constants";
+import { CLASSIFICATIONS, CATEGORIES, ODOO_TAGS, EVENT_LABELS, fmtDate, fmtDateTime, relTime } from "@/lib/constants";
 import { useCurrency } from "@/lib/currency";
 import { useAuth } from "@/lib/auth";
 import { Input } from "@/components/ui/input";
