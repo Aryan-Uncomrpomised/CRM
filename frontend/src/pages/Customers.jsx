@@ -47,6 +47,7 @@ export default function Customers() {
   const [q, setQ] = useState("");
   const [cls, setCls] = useState("all");
   const [category, setCategory] = useState("b2c");
+  const [tagFilter, setTagFilter] = useState("all");
   const [openId, setOpenId] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
