@@ -108,7 +108,7 @@ export default function Pipeline() {
     }
   };
 
-  const isConsumer = category === "consumer";
+  const isConsumer = category === "b2c";
 
   return (
     <div className="p-8 space-y-6" data-testid="pipeline-page">

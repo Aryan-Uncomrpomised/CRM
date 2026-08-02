@@ -1383,7 +1383,7 @@ function DocumentsPanel({ customer, documents, isAdmin, currentUserName, onChang
 
 // Pipeline stages per category — same values (classification) with re-labeled UI.
 const STAGE_MAP = {
-  consumer: [
+  b2c: [
     { value: "visitor", label: "Visitor", tone: "#94a3b8" },
     { value: "prospect", label: "Prospect", tone: "#38bdf8" },
     { value: "prime_prospect", label: "Prime P.", tone: "#fb923c" },
@@ -1415,7 +1415,7 @@ const STAGE_MAP = {
 
 function StageSelector({ customer, onMoved }) {
   const [busy, setBusy] = useState(false);
-  const stages = STAGE_MAP[customer.category] || STAGE_MAP.consumer;
+  const stages = STAGE_MAP[customer.category] || STAGE_MAP.b2c;
   const currentIdx = stages.findIndex((s) => s.value === customer.classification);
 
   const move = async (stageValue) => {

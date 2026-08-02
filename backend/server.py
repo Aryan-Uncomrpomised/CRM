@@ -425,25 +425,41 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
                          tag: Optional[str] = None,
                          current: dict = Depends(get_current_user)):
     is_admin = current.get("role") == "admin"
-    query = {}
+    and_conditions = []
+
     if classification and classification != "all":
-        query["classification"] = classification
+        and_conditions.append({"classification": classification})
+
     if category and category != "all":
-        if category in ["b2c", "consumer"]:
-            query["$or"] = [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]
+        cat_lower = category.lower()
+        if cat_lower in ["b2c", "consumer"]:
+            and_conditions.append({"$or": [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]})
+        elif cat_lower in ["investor", "investors"]:
+            and_conditions.append({"$or": [{"categories": {"$in": ["investor", "investors"]}}, {"category": {"$in": ["investor", "investors"]}}, {"tags": {"$regex": "investor|pca-b2bcollab", "$options": "i"}}]})
+        elif cat_lower in ["fund", "funder", "funders"]:
+            and_conditions.append({"$or": [{"categories": {"$in": ["fund", "funder", "funders"]}}, {"category": {"$in": ["fund", "funder", "funders"]}}, {"tags": {"$regex": "fund", "$options": "i"}}]})
         else:
-            query["$or"] = [{"categories": category}, {"category": category}]
+            and_conditions.append({"$or": [{"categories": cat_lower}, {"category": cat_lower}]})
+
     if tag and tag != "all":
-        query["tags"] = tag
+        and_conditions.append({"tags": tag})
+
     if source:
-        query["source"] = source
+        and_conditions.append({"source": source})
+
     if q:
-        query["$or"] = [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"email": {"$regex": q, "$options": "i"}},
-            {"company": {"$regex": q, "$options": "i"}},
-            {"phone": {"$regex": q, "$options": "i"}},
-        ]
+        and_conditions.append({
+            "$or": [
+                {"name": {"$regex": q, "$options": "i"}},
+                {"email": {"$regex": q, "$options": "i"}},
+                {"company": {"$regex": q, "$options": "i"}},
+                {"phone": {"$regex": q, "$options": "i"}},
+            ]
+        })
+
+    query = {"$and": and_conditions} if and_conditions else {}
+    docs = await db.customers.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
     now_iso = datetime.now(timezone.utc).isoformat()
     for d in docs:
         if not isinstance(d.get("name"), str) or not d.get("name") or d.get("name") == "False":
