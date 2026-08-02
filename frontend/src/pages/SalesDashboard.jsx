@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/lib/currency";
 import { Input } from "@/components/ui/input";
+import DateRangePicker from "@/components/DateRangePicker";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -56,6 +57,7 @@ export default function SalesDashboard() {
   const [sortBy, setSortBy] = useState("spent_desc");
   const [prodSearch, setProdSearch] = useState("");
   const [prodSort, setProdSort] = useState("revenue_desc");
+  const [range, setRange] = useState({ type: "quick", value: "all_time", label: "All time" });
 
   const { data: rawPnlPartners = [] } = useQuery({
     queryKey: ["customers-pnl", categoryFilter, pnlSearch, sortBy],
@@ -77,8 +79,20 @@ export default function SalesDashboard() {
   const pnlPartners = Array.isArray(rawPnlPartners) ? rawPnlPartners : [];
 
   const { data: sales } = useQuery({
-    queryKey: ["sales-stats"],
-    queryFn: async () => (await api.get("/stats/sales")).data,
+    queryKey: ["sales-stats", range],
+    queryFn: async () =>
+      (
+        await api.get("/stats/sales", {
+          params: {
+            range_type: range.type,
+            range_val: range.value,
+            year: range.year,
+            month: range.month,
+            from_date: range.from,
+            to_date: range.to,
+          },
+        })
+      ).data,
     staleTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
@@ -123,7 +137,7 @@ export default function SalesDashboard() {
   return (
     <div className="p-8 space-y-8" data-testid="sales-dashboard-page">
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-emerald-400">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -133,8 +147,11 @@ export default function SalesDashboard() {
             P&L Sales & Partner Spent Dashboard
           </h1>
         </div>
-        <div className="text-[11px] font-mono text-white/40 border border-white/10 rounded px-3 py-1.5 bg-white/[0.02]">
-          Odoo Live Revenue (Account 200110)
+        <div className="flex items-center gap-3">
+          <DateRangePicker onRangeChange={(newRange) => setRange(newRange)} />
+          <div className="text-[11px] font-mono text-white/40 border border-white/10 rounded px-3 py-2 bg-white/[0.02] shrink-0">
+            Account 200110
+          </div>
         </div>
       </div>
 

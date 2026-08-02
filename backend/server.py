@@ -1722,25 +1722,69 @@ async def stats_overview(_: dict = Depends(get_current_user)):
         "revenue_trend": weeks,
     }
 
+def _build_date_match(range_type: Optional[str], range_val: Optional[str],
+                      year: Optional[int], month: Optional[int],
+                      from_date: Optional[str], to_date: Optional[str]) -> dict:
+    match = {}
+    today = datetime.now(timezone.utc).date()
+
+    if range_type == "quick":
+        if range_val == "today":
+            match["date"] = today.strftime("%Y-%m-%d")
+        elif range_val == "yesterday":
+            y = today - timedelta(days=1)
+            match["date"] = y.strftime("%Y-%m-%d")
+        elif range_val == "last_7_days":
+            start = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+            match["date"] = {"$gte": start}
+        elif range_val == "last_30_days":
+            start = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+            match["date"] = {"$gte": start}
+        elif range_val == "this_month":
+            match["date"] = {"$regex": f"^{today.strftime('%Y-%m')}"}
+        elif range_val == "this_year":
+            match["date"] = {"$regex": f"^{today.strftime('%Y')}"}
+    elif range_type == "month":
+        y_str = str(year) if year else str(today.year)
+        if month is not None:
+            m_str = f"{int(month) + 1:02d}"
+            match["date"] = {"$regex": f"^{y_str}-{m_str}"}
+        else:
+            match["date"] = {"$regex": f"^{y_str}"}
+    elif range_type == "custom":
+        date_q = {}
+        if from_date:
+            date_q["$gte"] = from_date
+        if to_date:
+            date_q["$lte"] = to_date
+        if date_q:
+            match["date"] = date_q
+
+    return match
+
 @api.get("/stats/sales")
-async def stats_sales(_: dict = Depends(get_current_user)):
-    """Sales Analytics & Revenue Dashboard Endpoint."""
-    # 1. Total revenue & count from Account 200110 move_lines
+async def stats_sales(range_type: Optional[str] = None, range_val: Optional[str] = None,
+                      year: Optional[int] = None, month: Optional[int] = None,
+                      from_date: Optional[str] = None, to_date: Optional[str] = None,
+                      _: dict = Depends(get_current_user)):
+    """Sales Analytics & Revenue Dashboard Endpoint with Date Range Filtering."""
+    date_match = _build_date_match(range_type, range_val, year, month, from_date, to_date)
+
+    match_tot = {"account_id_code": "200110", **date_match}
     pipeline_tot = [
-        {"$match": {"account_id_code": "200110"}},
+        {"$match": match_tot},
         {"$group": {"_id": None, "total": {"$sum": {"$subtract": ["$credit", "$debit"]}}, "count": {"$sum": 1}}}
     ]
     tot_res = await db.move_lines.aggregate(pipeline_tot).to_list(1)
     tot_rev = round(float(tot_res[0]["total"]), 2) if tot_res else 0.0
-    
-    # 2. Unique sales orders count
-    distinct_moves = await db.move_lines.distinct("move_id_id", {"account_id_code": "200110"})
+
+    distinct_moves = await db.move_lines.distinct("move_id_id", match_tot)
     orders_count = len([m for m in distinct_moves if m])
     aov = round(tot_rev / orders_count, 2) if orders_count else 0.0
-    
-    # 3. Top selling products
+
+    match_prod = {"account_id_code": "200110", "product_id_name": {"$ne": None}, **date_match}
     pipeline_prod = [
-        {"$match": {"account_id_code": "200110", "product_id_name": {"$ne": None}}},
+        {"$match": match_prod},
         {"$group": {
             "_id": "$product_id_name",
             "quantity": {"$sum": "$quantity"},
@@ -1751,10 +1795,10 @@ async def stats_sales(_: dict = Depends(get_current_user)):
     ]
     raw_prods = await db.move_lines.aggregate(pipeline_prod).to_list(10)
     top_products = [{"name": p["_id"] or "General Sales", "quantity": round(p["quantity"], 2), "revenue": round(p["revenue"], 2)} for p in raw_prods]
-    
-    # 4. Monthly sales trend
+
+    match_month = {"account_id_code": "200110", "date": {"$ne": ""}, **date_match}
     pipeline_month = [
-        {"$match": {"account_id_code": "200110", "date": {"$ne": ""}}},
+        {"$match": match_month},
         {"$project": {
             "month": {"$substr": ["$date", 0, 7]},
             "amt": {"$subtract": ["$credit", "$debit"]}
@@ -1768,11 +1812,8 @@ async def stats_sales(_: dict = Depends(get_current_user)):
     ]
     raw_months = await db.move_lines.aggregate(pipeline_month).to_list(24)
     monthly_trend = [{"month": m["_id"], "revenue": round(m["revenue"], 2), "orders": m["orders"]} for m in raw_months[-12:]]
-    
-    # 5. Top spending customers
+
     top_cust_docs = await db.customers.find({"total_spent": {"$gt": 0}}, {"_id": 0}).sort("total_spent", -1).limit(10).to_list(10)
-    
-    # 6. Vendor purchases summary
     vendor_bills_count = await db.vendor_bills.count_documents({})
     stock_quants_count = await db.stock_quants.count_documents({})
 
