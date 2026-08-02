@@ -51,7 +51,7 @@ export default function Pipeline() {
 
   const visibleCategories = CATEGORIES;
 
-  const { data: customers = [] } = useQuery({
+  const { data: rawCustomers = [] } = useQuery({
     queryKey: ["pipeline-customers", category, tagFilter],
     queryFn: async () =>
       (await api.get("/customers", { params: { category, tag: tagFilter === "all" ? undefined : tagFilter, limit: 500 } })).data,
@@ -59,6 +59,8 @@ export default function Pipeline() {
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
+
+  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
 
   const pipeline = PIPELINES[category] || PIPELINES.b2c;
 

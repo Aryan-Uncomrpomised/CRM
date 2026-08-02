@@ -67,10 +67,12 @@ export default function Home() {
   const [feed, setFeed] = useState([]); // most-recent first
   const bottomRef = useRef(null);
 
-  const { data: history = [] } = useQuery({
+  const { data: rawHistory = [] } = useQuery({
     queryKey: ["copilot-history"],
     queryFn: async () => (await api.get("/copilot/history?limit=10")).data,
   });
+
+  const history = Array.isArray(rawHistory) ? rawHistory : [];
 
   useEffect(() => {
     if (feed.length && bottomRef.current) {

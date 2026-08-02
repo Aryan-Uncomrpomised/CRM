@@ -57,15 +57,7 @@ export default function SalesDashboard() {
   const [prodSearch, setProdSearch] = useState("");
   const [prodSort, setProdSort] = useState("revenue_desc");
 
-  const { data: sales } = useQuery({
-    queryKey: ["sales-stats"],
-    queryFn: async () => (await api.get("/stats/sales")).data,
-    staleTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
-  });
-
-  const { data: pnlPartners = [] } = useQuery({
+  const { data: rawPnlPartners = [] } = useQuery({
     queryKey: ["customers-pnl", categoryFilter, pnlSearch, sortBy],
     queryFn: async () =>
       (
@@ -77,6 +69,16 @@ export default function SalesDashboard() {
           },
         })
       ).data,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
+  });
+
+  const pnlPartners = Array.isArray(rawPnlPartners) ? rawPnlPartners : [];
+
+  const { data: sales } = useQuery({
+    queryKey: ["sales-stats"],
+    queryFn: async () => (await api.get("/stats/sales")).data,
     staleTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,

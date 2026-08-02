@@ -54,8 +54,8 @@ export default function Customers() {
 
   const visibleCategories = CATEGORIES;
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ["customers", q, cls, category],
+  const { data: rawCustomers = [] } = useQuery({
+    queryKey: ["customers", q, cls, category, tagFilter],
     queryFn: async () =>
       (
         await api.get("/customers", {
@@ -63,6 +63,7 @@ export default function Customers() {
             q: q || undefined,
             classification: cls === "all" ? undefined : cls,
             category: category === "all" ? undefined : category,
+            tag: tagFilter === "all" ? undefined : tagFilter,
           },
         })
       ).data,
@@ -70,6 +71,8 @@ export default function Customers() {
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
+
+  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
 
   const isConsumer = category !== "b2b";
   const catMeta = CATEGORIES.find((c) => c.value === category);

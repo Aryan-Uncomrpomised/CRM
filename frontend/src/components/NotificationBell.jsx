@@ -21,12 +21,13 @@ const KIND_META = {
 export default function NotificationBell() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const { data: items = [] } = useQuery({
+  const { data: rawItems = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => (await api.get("/notifications")).data,
     refetchInterval: 15000,
   });
 
+  const items = Array.isArray(rawItems) ? rawItems : [];
   const unread = items.filter((n) => !n.read).length;
 
   const markAll = async () => {
