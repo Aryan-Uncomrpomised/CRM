@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Send, Mail, MessageSquare, Phone, Linkedin, Building2, Lock, FileText, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Send, Mail, MessageSquare, Phone, Linkedin, Building2, Lock, FileText, Trash2, ExternalLink, Globe, MapPin, Tag } from "lucide-react";
 
 function classTag(v) {
   return <span className={`classification-tag tag-${v}`}>{v.replace("_", " ")}</span>;
@@ -532,33 +532,42 @@ function CustomerDrawer({ id, onClose }) {
         {c && (
           <>
             <SheetHeader>
+              {/* ── Avatar + Name ───────────────────────────────────────── */}
               <div className="flex items-center gap-3">
                 {c.avatar_url ? (
-                  <img src={c.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                  <img src={c.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-display font-bold">
-                    {c.name[0]}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500/20 to-sky-500/20 border border-white/10 flex items-center justify-center font-display font-bold text-lg shrink-0">
+                    {(c.name || "?")[0].toUpperCase()}
                   </div>
                 )}
-                <div>
-                  <div className="font-display font-black text-2xl tracking-tight text-left">
-                    {c.name}
+                <div className="min-w-0">
+                  <div className="font-display font-black text-2xl tracking-tight text-left truncate">
+                    {c.name || "—"}
                   </div>
-                  <SheetDescription className="text-left font-mono text-xs text-white/50">
-                    {c.email} · {c.country || "—"}
-                  </SheetDescription>
+                  {(c.company || c.title) && (
+                    <div className="text-xs text-white/50 font-mono mt-0.5 truncate">
+                      {[c.title, c.company].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 pt-3">
+
+              {/* ── Status Badges ──────────────────────────────────────── */}
+              <div className="flex flex-wrap gap-1.5 pt-2">
                 {classTag(c.classification)}
-                <span className="text-[10.5px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded">
-                  {c.category || "consumer"}
-                </span>
-                <span className="text-[10.5px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded">
-                  {c.source}
-                </span>
+                {c.category && (
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded bg-white/[0.03]">
+                    {c.category}
+                  </span>
+                )}
+                {c.source && (
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded bg-white/[0.03]">
+                    {c.source}
+                  </span>
+                )}
                 {c.subscription_active && (
-                  <span className="text-[10.5px] font-mono uppercase tracking-wider px-2 py-0.5 border border-emerald-800 bg-emerald-950/40 text-emerald-300 rounded">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-emerald-800 bg-emerald-950/40 text-emerald-300 rounded">
                     subscription
                   </span>
                 )}
@@ -567,50 +576,103 @@ function CustomerDrawer({ id, onClose }) {
                     href={c.linkedin_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[10.5px] font-mono uppercase tracking-wider px-2 py-0.5 border border-sky-800 bg-sky-950/40 text-sky-300 rounded inline-flex items-center gap-1"
+                    className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-sky-800 bg-sky-950/40 text-sky-300 rounded inline-flex items-center gap-1"
                   >
                     <Linkedin className="w-3 h-3" /> linkedin
                   </a>
                 )}
                 {c.owner && (
-                  <span className="text-[10.5px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded text-white/60">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-white/10 rounded text-white/50">
                     owner · {c.owner}
                   </span>
                 )}
               </div>
 
-              {(c.company || c.title || c.notes) && (
-                <div className="mt-3 border border-white/10 rounded p-3 space-y-1">
-                  {c.company && (
-                    <div className="text-[13px]">
-                      <span className="text-white/40 text-[11px] font-mono uppercase tracking-wider mr-2">company</span>
-                      {c.company}
+              {/* ── Contact Info Card ──────────────────────────────────── */}
+              <div className="mt-3 border border-white/[0.08] rounded-lg overflow-hidden bg-white/[0.02]">
+                <div className="px-3 py-2 border-b border-white/[0.06]">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">Contact Details</span>
+                </div>
+                <div className="divide-y divide-white/[0.05]">
+                  {/* Email */}
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <Mail className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                    <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">Email</span>
+                    {c.email ? (
+                      <a href={`mailto:${c.email}`} className="text-[13px] text-sky-300 hover:text-sky-200 truncate transition-colors">
+                        {c.email}
+                      </a>
+                    ) : (
+                      <span className="text-[13px] text-white/20 italic">Not provided</span>
+                    )}
+                  </div>
+                  {/* Phone */}
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <Phone className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                    <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">Phone</span>
+                    {c.phone ? (
+                      <a href={`tel:${c.phone}`} className="text-[13px] text-emerald-300 hover:text-emerald-200 truncate transition-colors">
+                        {c.phone}
+                      </a>
+                    ) : (
+                      <span className="text-[13px] text-white/20 italic">Not provided</span>
+                    )}
+                  </div>
+                  {/* Country */}
+                  {c.country && (
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <Globe className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                      <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">Country</span>
+                      <span className="text-[13px] text-white/80">{c.country}</span>
                     </div>
                   )}
-                  {c.title && (
-                    <div className="text-[13px]">
-                      <span className="text-white/40 text-[11px] font-mono uppercase tracking-wider mr-2">title</span>
-                      {c.title}
+                  {/* City */}
+                  {c.city && (
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <MapPin className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                      <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">City</span>
+                      <span className="text-[13px] text-white/80">{c.city}</span>
                     </div>
                   )}
+                  {/* Tags */}
+                  {c.tags && (Array.isArray(c.tags) ? c.tags.length > 0 : c.tags) && (
+                    <div className="flex items-start gap-3 px-3 py-2.5">
+                      <Tag className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
+                      <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">Tags</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(Array.isArray(c.tags) ? c.tags : String(c.tags).split(","))
+                          .map(t => t.trim()).filter(Boolean).map((tag, i) => (
+                          <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/60">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Notes */}
                   {c.notes && (
-                    <div className="text-[13px] text-white/70 mt-1">{c.notes}</div>
+                    <div className="flex items-start gap-3 px-3 py-2.5">
+                      <FileText className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
+                      <span className="text-[10.5px] font-mono text-white/40 w-12 shrink-0">Notes</span>
+                      <span className="text-[12px] text-white/60 leading-relaxed">{c.notes}</span>
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
 
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                <div className="border border-white/10 rounded p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">orders</div>
-                  <div className="font-display font-black text-xl">{c.total_orders}</div>
+              {/* ── KPI Row: Orders / Spent / Last Order ──────────────── */}
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="border border-white/[0.08] rounded-lg p-3 bg-white/[0.02] text-center">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">Orders</div>
+                  <div className="font-display font-black text-xl mt-1">{c.total_orders ?? "—"}</div>
                 </div>
-                <div className="border border-white/10 rounded p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">spent</div>
-                  <div className="font-display font-black text-xl">{format(c.total_spent || 0, { digits: 0 })}</div>
+                <div className="border border-white/[0.08] rounded-lg p-3 bg-white/[0.02] text-center">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">Spent</div>
+                  <div className="font-display font-black text-xl mt-1">{format(c.total_spent || 0, { digits: 0 })}</div>
                 </div>
-                <div className="border border-white/10 rounded p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">last order</div>
-                  <div className="font-display font-black text-sm mt-1">{fmtDate(c.last_order_at)}</div>
+                <div className="border border-white/[0.08] rounded-lg p-3 bg-white/[0.02] text-center">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">Last Order</div>
+                  <div className="font-display font-bold text-sm mt-1">{fmtDate(c.last_order_at)}</div>
                 </div>
               </div>
 
