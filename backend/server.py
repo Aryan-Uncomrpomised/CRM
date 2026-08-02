@@ -1653,7 +1653,7 @@ async def _sync_odoo_live(clear_dummy: bool = True) -> int:
             doc = {
                 "id": cid,
                 "name": p["name"],
-                "email": p.get("email") or (f"{p.get('phone')}@simplability.com" if p.get("phone") else f"{p['name'].lower().replace(' ', '.')}@simplability.com"),
+                "email": p.get("email") or "",
                 "phone": p.get("phone") or "",
                 "category": "b2b" if p.get("is_company") else "consumer",
                 "classification": "customer" if calc_spent > 0 else "prospect",
@@ -2075,7 +2075,7 @@ async def _execute_plan(action: str, params: dict, current: dict) -> dict:
                 raise HTTPException(403, "Admin access required to create this contact category")
             data = {
                 "name": params.get("name") or "",
-                "email": params.get("email") or f"contact-{uuid.uuid4().hex[:8]}@voyage-crm.temp",
+                "email": params.get("email") or "",
                 "phone": params.get("phone"),
                 "country": params.get("country"),
                 "category": cat,
@@ -2371,7 +2371,7 @@ async def seed_customers():
         c = {
             "id": str(uuid.uuid4()),
             "name": name,
-            "email": f"{name.lower().replace(' ', '.')}{random.randint(1,99)}@resend.dev",
+            "email": "",
             "phone": f"+91{random.randint(7000000000, 9999999999)}",
             "country": random.choice(COUNTRIES),
             "category": "consumer",
@@ -2515,7 +2515,7 @@ async def seed_b2b_investors():
             docs.append({
                 "id": str(uuid.uuid4()),
                 "name": p["name"],
-                "email": f"{first}@{handle}.com",
+                "email": "",
                 "phone": f"+1{random.randint(2000000000, 9999999999)}",
                 "country": p.get("country", "USA"),
                 "category": p["category"],
