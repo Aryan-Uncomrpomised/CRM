@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, formatApiError } from "@/lib/api";
-import { CLASSIFICATIONS, CATEGORIES, ODOO_TAGS, EVENT_LABELS, fmtDate, fmtDateTime, relTime } from "@/lib/constants";
+import { CLASSIFICATIONS, CATEGORIES, ODOO_TAGS, EVENT_LABELS, fmtDate, fmtDateTime } from "@/lib/constants";
 import { useCurrency } from "@/lib/currency";
 import { useAuth } from "@/lib/auth";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,8 @@ import { toast } from "sonner";
 import { Plus, Send, Mail, MessageSquare, Phone, Linkedin, Building2, Lock, FileText, Trash2, ExternalLink, Globe, MapPin, Tag } from "lucide-react";
 
 function classTag(v) {
-  return <span className={`classification-tag tag-${v}`}>{v.replace("_", " ")}</span>;
+  if (!v) return null;
+  return <span className={`classification-tag tag-${v}`}>{String(v).replace(/_/g, " ")}</span>;
 }
 
 export default function Customers() {
