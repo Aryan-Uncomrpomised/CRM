@@ -1701,24 +1701,35 @@ async def stats_overview(_: dict = Depends(get_current_user)):
     reminders_sent = await db.reminders.count_documents({"status": {"$in": ["sent", "simulated"]}})
     active_autos = await db.automations.count_documents({"active": True})
 
-    # revenue trend by week (last 8 weeks)
-    customers = await db.customers.find({}, {"_id": 0, "total_spent": 1, "created_at": 1}).to_list(1000)
+    # Total Sales Revenue directly from Account 200110 move_lines
+    pipeline_tot = [
+        {"$match": {"account_id_code": "200110"}},
+        {"$group": {"_id": None, "total": {"$sum": {"$subtract": ["$credit", "$debit"]}}}}
+    ]
+    tot_res = await db.move_lines.aggregate(pipeline_tot).to_list(1)
+    tot_rev = round(float(tot_res[0]["total"]), 2) if tot_res else 0.0
+
+    # Revenue trend by week (last 8 weeks) from real sales move_lines dates
     now = datetime.now(timezone.utc)
     weeks = []
     for i in range(7, -1, -1):
-        wstart = now - timedelta(days=(i + 1) * 7)
-        wend = now - timedelta(days=i * 7)
-        rev = sum([c.get("total_spent", 0) or 0 for c in customers
-                   if c.get("created_at") and wstart.isoformat() <= c["created_at"] < wend.isoformat()])
-        weeks.append({"week": wstart.strftime("%b %d"), "revenue": round(rev, 2)})
+        wstart = (now - timedelta(days=(i + 1) * 7)).strftime("%Y-%m-%d")
+        wend = (now - timedelta(days=i * 7)).strftime("%Y-%m-%d")
+        pipeline_w = [
+            {"$match": {"account_id_code": "200110", "date": {"$gte": wstart, "$lt": wend}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$subtract": ["$credit", "$debit"]}}}}
+        ]
+        res_w = await db.move_lines.aggregate(pipeline_w).to_list(1)
+        rev_w = round(float(res_w[0]["total"]), 2) if res_w else 0.0
+        w_label = (now - timedelta(days=i * 7)).strftime("%b %d")
+        weeks.append({"week": w_label, "revenue": rev_w})
 
-    total_revenue = sum([c.get("total_spent", 0) or 0 for c in customers])
     return {
         "total_customers": total,
         "by_classification": by_class,
         "reminders_sent": reminders_sent,
         "active_automations": active_autos,
-        "total_revenue": round(total_revenue, 2),
+        "total_revenue": tot_rev,
         "revenue_trend": weeks,
     }
 
