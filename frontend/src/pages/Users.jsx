@@ -90,9 +90,8 @@ export default function Users() {
             User <span className="text-white/40">access</span>
           </h1>
           <p className="text-white/50 text-sm mt-2 max-w-xl">
-            Create accounts for your team — they'll get an invite email to set
-            their own password. Or, review sign-up requests below. Only
-            official work emails are accepted.
+            Create accounts for your team directly — set their name, email, role
+            and password. They can log in immediately without needing an invite.
           </p>
         </div>
         <Button
@@ -252,11 +251,29 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
     name: "",
     email: "",
     role: "member",
+    password: "",
+    confirmPassword: "",
   });
+  const [showPwd, setShowPwd] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const reset = () => setForm({ name: "", email: "", role: "member", password: "", confirmPassword: "" });
+
   const submit = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Name and email are required");
+      return;
+    }
+    if (!form.password) {
+      toast.error("Password is required");
+      return;
+    }
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
     setBusy(true);
@@ -265,11 +282,12 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
         email: form.email.trim(),
         name: form.name.trim(),
         role: form.role,
+        password: form.password,
       });
-      toast.success("User created — invite email sent");
+      toast.success(`Account created for ${form.name.trim()} — they can log in now`);
       onCreated();
       onOpenChange(false);
-      setForm({ name: "", email: "", role: "member" });
+      reset();
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail));
     } finally {
@@ -278,18 +296,18 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="bg-[color:var(--vc-surface)] border-white/10 max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display font-black text-2xl tracking-tight">
-            Create user
+            Create account
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+
+        <div className="space-y-4 mt-1">
+          {/* Name */}
           <div>
-            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">
-              Full name
-            </Label>
+            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">Full name</Label>
             <div className="relative mt-1.5">
               <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
               <Input
@@ -301,28 +319,26 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
               />
             </div>
           </div>
+
+          {/* Email */}
           <div>
-            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">
-              Work email
-            </Label>
+            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">Email</Label>
             <div className="relative mt-1.5">
               <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
               <Input
                 data-testid="nu-email"
-                placeholder="you@company.com"
+                type="email"
+                placeholder="user@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="bg-black/40 border-white/10 pl-8"
               />
             </div>
-            <div className="text-[10.5px] font-mono text-white/40 mt-1">
-              Free providers (gmail, yahoo, outlook, etc.) are blocked.
-            </div>
           </div>
+
+          {/* Role */}
           <div>
-            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">
-              Role
-            </Label>
+            <Label className="text-xs font-mono uppercase tracking-wider text-white/50">Role</Label>
             <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
               <SelectTrigger data-testid="nu-role" className="mt-1.5 bg-black/40 border-white/10">
                 <SelectValue />
@@ -334,24 +350,77 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="border border-[color:var(--vc-accent)]/40 bg-[color:var(--vc-accent)]/10 rounded px-3 py-2">
-            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-[color:var(--vc-accent)]">
-              <Mail className="w-3.5 h-3.5" /> invite by email
+
+          {/* Divider */}
+          <div className="border-t border-white/[0.06] pt-1">
+            <div className="text-[10.5px] font-mono uppercase tracking-widest text-white/30 mb-3">
+              <KeyRound className="inline w-3 h-3 mr-1.5 mb-0.5" />Set password
             </div>
-            <p className="text-[12px] text-white/70 mt-1 leading-snug">
-              We'll send them an email to set their own password. No temp
-              passwords to share.
-            </p>
+
+            {/* Password */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs font-mono uppercase tracking-wider text-white/50">Password</Label>
+                <div className="relative mt-1.5">
+                  <KeyRound className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Input
+                    data-testid="nu-password"
+                    type={showPwd ? "text" : "password"}
+                    placeholder="Min. 8 characters"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="bg-black/40 border-white/10 pl-8 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 text-[10px] font-mono uppercase tracking-wider"
+                  >
+                    {showPwd ? "hide" : "show"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <Label className="text-xs font-mono uppercase tracking-wider text-white/50">Confirm password</Label>
+                <div className="relative mt-1.5">
+                  <KeyRound className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Input
+                    data-testid="nu-confirm-password"
+                    type={showPwd ? "text" : "password"}
+                    placeholder="Repeat password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    className={`bg-black/40 border-white/10 pl-8 ${
+                      form.confirmPassword && form.password !== form.confirmPassword
+                        ? "border-red-500/60"
+                        : form.confirmPassword && form.password === form.confirmPassword
+                          ? "border-emerald-500/60"
+                          : ""
+                    }`}
+                  />
+                  {form.confirmPassword && (
+                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono ${
+                      form.password === form.confirmPassword ? "text-emerald-400" : "text-red-400"
+                    }`}>
+                      {form.password === form.confirmPassword ? "✓" : "✗"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="mt-2">
           <Button
             data-testid="nu-submit"
             onClick={submit}
             disabled={busy}
-            className="bg-white text-black hover:bg-white/90"
+            className="bg-white text-black hover:bg-white/90 w-full"
           >
-            {busy ? "Sending invite…" : "Send invite"}
+            {busy ? "Creating account…" : "Create account"}
           </Button>
         </DialogFooter>
       </DialogContent>

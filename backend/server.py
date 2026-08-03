@@ -1298,7 +1298,9 @@ async def create_user(body: UserCreate, current: dict = Depends(get_current_user
     if current.get("role") != "admin":
         raise HTTPException(403, "Admin access required")
     email = body.email.lower().strip()
-    if not is_official_email(email):
+    # Only enforce work-email restriction when using the invite flow (no password).
+    # When admin sets a password directly, any valid email is accepted.
+    if not body.password and not is_official_email(email):
         raise HTTPException(400, "Please use an official work email (free email providers are not allowed).")
     if body.password is not None and len(body.password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters.")
@@ -1321,7 +1323,7 @@ async def create_user(body: UserCreate, current: dict = Depends(get_current_user
         invite_sent = True
     await notify(current.get("name", "Admin"), "user_created",
                  f"User created: {body.name}",
-                 f"{email} · {body.role}" + (" · invite sent" if invite_sent else ""))
+                 f"{email} · {body.role}" + (" · invite sent" if invite_sent else " · password set"))
     return _user_public(doc)
 
 @api.post("/users/{uid}/approve", response_model=UserOut)
