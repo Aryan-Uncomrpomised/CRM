@@ -97,7 +97,7 @@ async def get_current_user(request: Request) -> dict:
 # Models
 # -----------------------------------------------------------------------------
 Classification = Literal["visitor", "prospect", "prime_prospect", "customer", "subscriber"]
-Category = Literal["consumer", "b2b", "investor", "fund"]
+Category = Literal["consumer", "b2b", "investor", "institutional_clients"]
 Channel = Literal["email", "sms", "whatsapp"]
 EventType = Literal["visit", "add_to_cart", "address_added", "payment_attempt",
                     "order_completed", "subscription_started", "subscription_renewed"]
@@ -120,7 +120,7 @@ def is_official_email(email: str) -> bool:
 # Keyword → tag map used to auto-classify tasks
 TASK_KEYWORD_TAGS = [
     (["investor", "vc", "venture", "raise", "fundraise", "pitch", "deck", "cap table"], "investor"),
-    (["fund", "pe ", "hedge", "lp ", "family office"], "fund"),
+    (["fund", "pe ", "hedge", "lp ", "family office"], "institutional_clients"),
     (["b2b", "wholesale", "bulk", "reseller", "retail partner", "distributor"], "b2b"),
     (["linkedin", "outreach", "cold intro"], "outreach"),
     (["shopify", "odoo", "sync", "webhook"], "integration"),
@@ -436,8 +436,8 @@ async def list_customers(q: Optional[str] = None, classification: Optional[str] 
             and_conditions.append({"$or": [{"categories": {"$in": ["consumer", "b2c"]}}, {"category": {"$in": ["consumer", "b2c"]}}]})
         elif cat_lower in ["investor", "investors"]:
             and_conditions.append({"$or": [{"categories": {"$in": ["investor", "investors"]}}, {"category": {"$in": ["investor", "investors"]}}, {"tags": {"$regex": "investor|pca-b2bcollab", "$options": "i"}}]})
-        elif cat_lower in ["fund", "funder", "funders"]:
-            and_conditions.append({"$or": [{"categories": {"$in": ["fund", "funder", "funders"]}}, {"category": {"$in": ["fund", "funder", "funders"]}}, {"tags": {"$regex": "fund", "$options": "i"}}]})
+        elif cat_lower in ["fund", "funder", "funders", "institutional_clients", "institutional clients"]:
+            and_conditions.append({"$or": [{"categories": {"$in": ["fund", "funder", "funders", "institutional_clients"]}}, {"category": {"$in": ["fund", "funder", "funders", "institutional_clients"]}}, {"tags": {"$regex": "institutional_clients|fund", "$options": "i"}}]})
         else:
             and_conditions.append({"$or": [{"categories": cat_lower}, {"category": cat_lower}]})
 
@@ -1956,13 +1956,13 @@ Action schemas:
      "title": "..." (optional),
      "linkedin_url": "..." (optional),
      "notes": "..." (optional; capture the free-form context),
-     "category": "consumer" | "b2b" | "investor" | "fund",
+     "category": "consumer" | "b2b" | "investor" | "institutional_clients",
      "classification": "visitor" | "prospect" | "prime_prospect" | "customer" | "subscriber"
    }
    Rules:
    - "potential investor" / "VC" / "angel" → category="investor"
    - "wholesale" / "retail partner" / "B2B" → category="b2b"
-   - "PE" / "growth fund" / "family office" → category="fund" (Institutional Clients)
+   - "PE" / "growth fund" / "family office" → category="institutional_clients" (Institutional Clients)
    - If the user says something like "I've shared proposals / decks / gave options / went to payment" → classification="prime_prospect"
    - If just introduced with intent to convert → "prospect"
    - If bought → "customer"; monthly plan → "subscriber"
@@ -1979,7 +1979,7 @@ Action schemas:
 
 3. query_customers — extract filters:
    {
-     "category": "consumer" | "b2b" | "investor" | "fund" | null,
+     "category": "consumer" | "b2b" | "investor" | "institutional_clients" | null,
      "classification": "visitor" | "prospect" | ... | null,
      "created_from": "YYYY-MM-DD" or null,
      "created_to": "YYYY-MM-DD" or null,
@@ -2004,7 +2004,7 @@ Action schemas:
      "url": "...",
      "kind": "pitch_deck" | "proposal" | "contract" | "spreadsheet" | "other",
      "source": "google_drive" | "onedrive" | "link",
-     "category": "consumer" | "b2b" | "investor" | "fund",
+     "category": "consumer" | "b2b" | "investor" | "institutional_clients",
      "related_customer_name": "..." or null,
      "description": "..." or null
    }
@@ -2050,7 +2050,7 @@ _MONEY_PATTERNS = [" cr", "crore", "lakh", "lac", "million", "$", "₹", "€", 
 def _is_high_value(action: str, params: dict) -> tuple[bool, str]:
     if action == "create_contact":
         cat = params.get("category")
-        if cat in ("investor", "fund"):
+        if cat in ("investor", "institutional_clients"):
             return True, f"Creates a {cat} contact — admin-only category"
         if cat == "b2b":
             return True, "Creates a B2B contact — admin-only category"
@@ -2172,7 +2172,7 @@ async def _execute_plan(action: str, params: dict, current: dict) -> dict:
             for cls in ["visitor", "prospect", "prime_prospect", "customer", "subscriber"]:
                 by_class[cls] = await db.customers.count_documents({"classification": cls})
             by_cat = {}
-            for c in ["consumer", "b2b", "investor", "fund"]:
+            for c in ["consumer", "b2b", "investor", "institutional_clients"]:
                 by_cat[c] = await db.customers.count_documents({"category": c})
             open_tasks = await db.tasks.count_documents({"status": {"$ne": "done"}})
             result.update({
@@ -2496,17 +2496,17 @@ INVESTOR_SEEDS = [
     {"name": "Chen Wei", "company": "Sequoia China", "title": "Vice President",
      "category": "investor", "country": "Singapore"},
 ]
-FUND_SEEDS = [
-    {"name": "David Cohen", "company": "Tiger Global", "title": "Managing Director",
-     "category": "fund", "country": "USA"},
+INSTITUTIONAL_CLIENTS_SEEDS = [
+    {"name": "Robert Miller", "company": "Vanguard", "title": "Portfolio Manager",
+     "category": "institutional_clients", "country": "USA"},
     {"name": "Priya Nair", "company": "SoftBank Vision Fund", "title": "Investment Director",
-     "category": "fund", "country": "UAE"},
-    {"name": "Marcus Weber", "company": "General Atlantic", "title": "Senior VP",
-     "category": "fund", "country": "Germany"},
+     "category": "institutional_clients", "country": "UAE"},
+    {"name": "Hans Becker", "company": "Global Tech Fund", "title": "Partner",
+     "category": "institutional_clients", "country": "Germany"},
 ]
 
 async def seed_b2b_investors():
-    if await db.customers.count_documents({"category": {"$in": ["b2b", "investor", "fund"]}}) > 0:
+    if await db.customers.count_documents({"category": {"$in": ["b2b", "investor", "institutional_clients"]}}) > 0:
         return
     now = datetime.now(timezone.utc)
     docs = []
@@ -2560,7 +2560,7 @@ async def seed_tasks():
         Task(title="Draft LinkedIn outreach template for Institutional Clients",
              description="One template for cold intros, another for warm follow-ups.",
              assignee="Meera (Growth)", priority="medium",
-             tags=["fund", "outreach"]),
+             tags=["institutional_clients", "outreach"]),
         Task(title="Weekly reminder-log review",
              description="Check failed sends & re-queue.",
              assignee="Rahul (CS)", status="in_progress",

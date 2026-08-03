@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Kanban, Lock, User as UserIcon, Mail, Building2 } from "lucide-react";
 
 // Retail pipeline uses the 5-stage classification directly.
-// B2B / Investor / Fund pipelines re-label the same 5 stages to a sales-flavour vocabulary.
+// B2B / Investor / Institutional Clients pipelines re-label the same 5 stages to a sales-flavour vocabulary.
 const RETAIL_STAGES = [
   { value: "visitor", label: "Visitor", tone: "#94a3b8" },
   { value: "prospect", label: "Prospect", tone: "#38bdf8" },
@@ -37,7 +37,7 @@ const PIPELINES = {
   b2c:      { label: "B2C",      stages: RETAIL_STAGES },
   b2b:      { label: "B2B",      stages: B2B_STAGES },
   investor: { label: "Investor", stages: INVESTOR_STAGES },
-  fund:     { label: "Institutional Clients", stages: INVESTOR_STAGES },
+  institutional_clients: { label: "Institutional Clients", stages: INVESTOR_STAGES },
 };
 
 export default function Pipeline() {

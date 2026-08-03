@@ -10,7 +10,7 @@ export const CATEGORIES = [
   { value: "b2c", label: "B2C", desc: "V-Fresh B2C & D2C shoppers" },
   { value: "b2b", label: "B2B", desc: "V-Fresh B2B & Wholesale" },
   { value: "investor", label: "Investor", desc: "Angel or VC" },
-  { value: "fund", label: "Institutional Clients", desc: "PE / Growth fund / Family office" },
+  { value: "institutional_clients", label: "Institutional Clients", desc: "PE / Growth fund / Family office" },
 ];
 
 export const ODOO_TAGS = [

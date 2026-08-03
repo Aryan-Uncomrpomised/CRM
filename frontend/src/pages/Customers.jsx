@@ -1312,7 +1312,7 @@ function DocumentsPanel({ customer, documents, isAdmin, currentUserName, onChang
   // Which kinds are admin-only for the current category
   const restrictedForRow = (d) =>
     !isAdmin && (d.kind === "pitch_deck" || d.kind === "contract"
-      || ["b2b", "investor", "fund"].includes(d.category));
+      || ["b2b", "investor", "institutional_clients"].includes(d.category));
 
   return (
     <div className="mt-5 space-y-4" data-testid="documents-panel">
@@ -1378,7 +1378,7 @@ function DocumentsPanel({ customer, documents, isAdmin, currentUserName, onChang
         >
           <Plus className="w-4 h-4 mr-1.5" /> {busy ? "Attaching…" : "Attach document"}
         </Button>
-        {!isAdmin && (customer.category === "b2b" || customer.category === "investor" || customer.category === "fund") && (
+        {!isAdmin && (customer.category === "b2b" || customer.category === "investor" || customer.category === "institutional_clients") && (
           <div className="text-[11px] font-mono text-white/40">
             Note: pitch decks and contracts are admin-only for this contact category.
           </div>
@@ -1468,7 +1468,7 @@ const STAGE_MAP = {
     { value: "customer", label: "Committed", tone: "#34d399" },
     { value: "subscriber", label: "Deployed", tone: "#d4ff2a" },
   ],
-  fund: [
+  institutional_clients: [
     { value: "visitor", label: "Sourced", tone: "#94a3b8" },
     { value: "prospect", label: "Intro", tone: "#38bdf8" },
     { value: "prime_prospect", label: "Diligence", tone: "#fb923c" },
