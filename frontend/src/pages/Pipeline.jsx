@@ -37,7 +37,7 @@ const PIPELINES = {
   b2c:      { label: "B2C",      stages: RETAIL_STAGES },
   b2b:      { label: "B2B",      stages: B2B_STAGES },
   investor: { label: "Investor", stages: INVESTOR_STAGES },
-  fund:     { label: "Fund",     stages: INVESTOR_STAGES },
+  fund:     { label: "Institutional Clients", stages: INVESTOR_STAGES },
 };
 
 export default function Pipeline() {

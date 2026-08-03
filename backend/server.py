@@ -1962,7 +1962,7 @@ Action schemas:
    Rules:
    - "potential investor" / "VC" / "angel" → category="investor"
    - "wholesale" / "retail partner" / "B2B" → category="b2b"
-   - "PE" / "growth fund" / "family office" → category="fund"
+   - "PE" / "growth fund" / "family office" → category="fund" (Institutional Clients)
    - If the user says something like "I've shared proposals / decks / gave options / went to payment" → classification="prime_prospect"
    - If just introduced with intent to convert → "prospect"
    - If bought → "customer"; monthly plan → "subscriber"
@@ -2557,7 +2557,7 @@ async def seed_tasks():
              related_customer_id=(investor or {}).get("id"),
              related_customer_name=(investor or {}).get("name"),
              tags=["investor", "deck"]),
-        Task(title="Draft LinkedIn outreach template for funds",
+        Task(title="Draft LinkedIn outreach template for Institutional Clients",
              description="One template for cold intros, another for warm follow-ups.",
              assignee="Meera (Growth)", priority="medium",
              tags=["fund", "outreach"]),
