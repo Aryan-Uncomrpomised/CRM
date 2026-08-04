@@ -591,8 +591,9 @@ function CustomerDrawer({ id, onClose }) {
 
               {/* ── Contact Info Card ──────────────────────────────────── */}
               <div className="mt-3 border border-white/[0.08] rounded-lg overflow-hidden bg-white/[0.02]">
-                <div className="px-3 py-2 border-b border-white/[0.06]">
+                <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">Contact Details</span>
+                  <button onClick={() => setTab("edit")} className="text-[10px] font-mono uppercase tracking-widest text-[color:var(--vc-lime)] hover:underline">Edit info</button>
                 </div>
                 <div className="divide-y divide-white/[0.05]">
                   {/* Email */}
