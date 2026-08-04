@@ -33,6 +33,7 @@ export default function Users() {
   const { user: currentUser } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [emailUser, setEmailUser] = useState(null);
 
   const { data: users = [], isError, error } = useQuery({
     queryKey: ["users"],
@@ -211,7 +212,16 @@ export default function Users() {
                 </span>
               </div>
               <div className="font-mono text-xs text-white/50">{fmtDate(u.created_at)}</div>
-              <div className="text-right">
+              <div className="text-right flex items-center justify-end gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEmailUser(u)}
+                  data-testid={`email-user-${u.id}`}
+                  className="text-white/60 hover:text-white"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                </Button>
                 {!isSelf && (
                   <Button
                     size="sm"
@@ -241,6 +251,11 @@ export default function Users() {
           qc.invalidateQueries({ queryKey: ["users"] });
           qc.invalidateQueries({ queryKey: ["team"] });
         }}
+      />
+      
+      <SendEmailDialog
+        user={emailUser}
+        onClose={() => setEmailUser(null)}
       />
     </div>
   );
@@ -421,6 +436,66 @@ function NewUserDialog({ open, onOpenChange, onCreated }) {
             className="bg-white text-black hover:bg-white/90 w-full"
           >
             {busy ? "Creating account…" : "Create account"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SendEmailDialog({ user, onClose }) {
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    if (!subject.trim() || !message.trim()) return toast.error("Subject and message are required");
+    setSending(true);
+    try {
+      await api.post(`/users/${user.id}/send_email`, { subject, message });
+      toast.success(`Email sent to ${user.name}`);
+      onClose();
+      setSubject("");
+      setMessage("");
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md bg-[color:var(--vc-surface)] border-white/10">
+        <DialogHeader>
+          <DialogTitle>Send Email</DialogTitle>
+          <div className="text-sm text-white/50 font-mono mt-1">To: {user?.email}</div>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Subject</Label>
+            <Input 
+              value={subject} 
+              onChange={(e) => setSubject(e.target.value)} 
+              placeholder="Meeting at 10?"
+              data-testid="email-subject"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Message</Label>
+            <textarea
+              className="flex min-h-[120px] w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Hi there..."
+              data-testid="email-message"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={sending}>Cancel</Button>
+          <Button onClick={send} disabled={sending} data-testid="email-send-btn" className="bg-[color:var(--vc-lime)] text-black hover:bg-[color:var(--vc-lime)]/90">
+            {sending ? "Sending..." : "Send Email"}
           </Button>
         </DialogFooter>
       </DialogContent>

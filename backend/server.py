@@ -343,6 +343,10 @@ class UserCreate(BaseModel):
     role: UserRole = "member"
     password: Optional[str] = None  # if omitted → invite email flow
 
+class UserEmailBody(BaseModel):
+    subject: str
+    message: str
+
 class SignupIn(BaseModel):
     email: EmailStr
     name: str
@@ -1342,6 +1346,22 @@ async def approve_user(uid: str, current: dict = Depends(get_current_user)):
                  f"User approved: {updated['name']}",
                  f"{updated['email']} · invite sent")
     return _user_public(updated)
+
+@api.post("/users/{uid}/send_email")
+async def send_email_to_user(uid: str, body: UserEmailBody, current: dict = Depends(get_current_user)):
+    if current.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+    user = await db.users.find_one({"id": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    html = f"<div style='font-family:sans-serif;line-height:1.6;'>{body.message.replace(chr(10), '<br>')}</div>"
+    try:
+        await send_email(user["email"], body.subject, html)
+        return {"status": "sent"}
+    except Exception as e:
+        logger.error(f"Failed to send email to user {user['email']}: {e}")
+        raise HTTPException(500, "Failed to send email")
 
 @api.delete("/users/{uid}")
 async def delete_user(uid: str, current: dict = Depends(get_current_user)):
